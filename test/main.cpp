@@ -14,6 +14,11 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 	mwindow.Create3DWindow();
 
 	device=new zhiDevice(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
+	device->insertPoint(1, 1);
+	device->insertPoint(1, -1);
+	device->insertPoint(-1, -1);
+	device->insertPoint(-1, 1);
+	device->setBackgroundColor(0xFFFFFF);
 	mwindow.SetDisplayFunc(DrawFunc);
 	mwindow.SetReSize(reSizeScreen);
 	WindowsLoop();
