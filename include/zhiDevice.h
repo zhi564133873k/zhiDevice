@@ -48,10 +48,11 @@ private:
 	void drawBackGround() {
 		for (int j = 0; j < height; ++j) {
 			for (int i = 0; i < width; ++i) {
-				framebuffer[j][i] = backgroundColor;
+				drawPixel(i, j, backgroundColor);
 			}
 		}
 	}
+
 
 	void drawWire() {
 		drawLine(100, 100, 700, 500);
@@ -117,7 +118,7 @@ private:
 	}
 
 	void drawPixel(int x,int y,unsigned int color) {
-		if (x<=width&&y<=height&&x>0&&y>0) {
+		if (x<=width&&y<=height&&x>0&&y>0&&framebuffer!=nullptr) {
 			framebuffer[(height-y)][x] = color;
 		}
 	}
