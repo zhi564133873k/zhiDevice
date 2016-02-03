@@ -7,6 +7,9 @@ public:
 	zhiDevice() :zhiDevice(nullptr, 800, 600) {};
 
 	void drawFrames() {
+		if (framebuffer==nullptr) {
+			return;
+		}
 		drawBackGround();
 
 		drawWire();
@@ -67,6 +70,9 @@ private:
 	}
 
 	void drawLine(int x1,int y1,int x2,int y2,unsigned int color) {
+		if (!CohenSutherland(x1, y1, x2, y2)) {
+			return;
+		}
 		double k,d;
 		int start, end, x, y;
 		bool xSym=false,xySym=false;
@@ -117,9 +123,37 @@ private:
 		}
 	}
 
-	void drawPixel(int x,int y,unsigned int color) {
-		if (x<=width&&y<=height&&x>0&&y>0&&framebuffer!=nullptr) {
-			framebuffer[(height-y)][x] = color;
+	bool CohenSutherland(int& x1, int& y1, int& x2, int& y2) {
+		int p1code = getConhenCode(x1, y1);
+		int p2code = getConhenCode(x2, y2);
+		if (p1code | p2code == 0) {
+			return true;
+		} else if (p1code&p2code != 0) {
+			return false;
 		}
+		/**
+		*mark
+		*/
+
+	}
+
+	int getConhenCode(int x, int y) {
+		int code;
+		if (y>height) {
+			code |= 8;
+		} else if (y<0) {
+			code |= 4;
+		}
+		if (x>width) {
+			code |= 2;
+		} else if (x<0) {
+			code |= 1;
+		}
+		return code;
+	}
+
+
+	void drawPixel(int x,int y,unsigned int color) {
+			framebuffer[(height-y)][x] = color;
 	}
 };
