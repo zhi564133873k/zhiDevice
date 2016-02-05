@@ -70,13 +70,12 @@ private:
 	}
 
 	void drawLine(int x1,int y1,int x2,int y2,unsigned int color) {
-		if (!CohenSutherland(x1, y1, x2, y2)) {
+		double k = double(y2 - y1) / (x2 - x1), d;
+		if (!CohenSutherland(x1, y1, x2, y2,k)) {
 			return;
-		}
-		double k,d;
+		}	
 		int start, end, x, y;
 		bool xSym=false,xySym=false;
-		k = double(y2 - y1) / (x2 - x1);
 		if (k<0) {
 			xSym = true;
 		}
@@ -123,7 +122,7 @@ private:
 		}
 	}
 
-	bool CohenSutherland(int& x1, int& y1, int& x2, int& y2) {
+	bool CohenSutherland(int& x1, int& y1, int& x2, int& y2,double k) {
 		int p1code = getConhenCode(x1, y1);
 		int p2code = getConhenCode(x2, y2);
 		if (p1code | p2code == 0) {
@@ -131,14 +130,81 @@ private:
 		} else if (p1code&p2code != 0) {
 			return false;
 		}
-		/**
-		*mark
-		*/
+		changeCohenXY(x1, y1, p1code, k);
+		changeCohenXY(x2, y2, p2code, k);
+		return true;
+	}
 
+	void changeCohenXY(int& x, int& y,int code, double k) {
+		int xTemp = x, yTemp = y ,height=(zhiDevice::height-1),width=(zhiDevice::width-1);
+		switch (code) {
+		case 8: // N  
+			x = xTemp + (height - yTemp) / k + 0.5;
+			y = height;
+			break;
+		case 4: // S  
+			x = xTemp + (-yTemp) / k + 0.5;
+			y = 0;
+			break;
+		case 1: // W  
+			y = yTemp + (-xTemp)*k + 0.5;
+			x = 0;
+			break;
+		case 2: // E  
+			y = yTemp + (width - xTemp) * k + 0.5;
+			x = width;
+			break;
+		case 9: // NW  			
+			xTemp = xTemp + (height - yTemp) / k + 0.5;
+			yTemp = height;
+			if (xTemp < 0 || xTemp > width) {
+				x = 0;
+				y = yTemp + (-xTemp)*k + 0.5;
+			} else {
+				x = xTemp;
+				y = yTemp;
+			}
+			break;
+		case 10: // NE  		
+			xTemp = xTemp + (height - yTemp) / k + 0.5;
+			yTemp = height;
+			if (xTemp < 0 || xTemp > width) {
+				x = width;
+				y = yTemp + (width - xTemp)*k + 0.5;
+			} else {
+				x = xTemp;
+				y = yTemp;
+			}
+			break;
+		case 6: // SE 			
+			xTemp = xTemp + (-yTemp) / k + 0.5;
+			yTemp = 0;
+			if (xTemp < 0 || xTemp > width) {
+				x = width;
+				y = yTemp + (width - xTemp) * k + 0.5;
+			} else {
+				x = xTemp;
+				y = yTemp;
+			}
+			break;
+		case 5: // SW  			
+			xTemp = xTemp + (0 - yTemp) / k + 0.5;
+			yTemp = 0;
+			if (xTemp < 0 || xTemp > width) {
+				x = 0;
+				y = yTemp + (-xTemp)*k + 0.5;
+			} else {
+				x = xTemp;
+				y = yTemp;
+			}
+			break;
+		default:
+			break;
+		}
 	}
 
 	int getConhenCode(int x, int y) {
-		int code;
+		int code=0;
 		if (y>height) {
 			code |= 8;
 		} else if (y<0) {
@@ -154,6 +220,6 @@ private:
 
 
 	void drawPixel(int x,int y,unsigned int color) {
-			framebuffer[(height-y)][x] = color;
+			framebuffer[(height-y-1)][x] = color;
 	}
 };
