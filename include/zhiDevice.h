@@ -1,5 +1,6 @@
 #include<vector>
 #include<utility>
+#include"zhi_matrix.h"
 class zhiDevice {
 public:
 	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height) {};
@@ -12,7 +13,7 @@ public:
 		}
 		drawBackGround();
 
-		drawWire();
+		//drawWire();
 	}
 
 	void ReSizeScreen(unsigned int **framebuffer, int width, int height) {
@@ -21,8 +22,12 @@ public:
 		zhiDevice::framebuffer = framebuffer;
 	}
 
-	void insertPoint(int x, int y) {
-		point.emplace_back(x, y);
+	void insertPoint(int x,int y,int z) {
+		point.emplace_back(x,y,z);
+	}
+
+	void insertPoint(vector_c p) {
+		point.push_back(p);
 	}
 
 	void setWidth(int width) {
@@ -46,7 +51,7 @@ private:
 	unsigned int **framebuffer = nullptr;
 
 	unsigned int backgroundColor = 0x000000;
-	std::vector<std::pair<int, int>> point;
+	std::vector<vector_c> point;
 
 	void drawBackGround() {
 		for (int j = 0; j < height; ++j) {
@@ -58,10 +63,12 @@ private:
 
 
 	void drawWire() {
-		drawLine(100, 100, 700, 500);
-		drawLine(100, 500, 700, 100);
-		drawLine(100, 100, 500, 700);
-		drawLine(500, 100, 100, 700);
+		for (auto p2 = point.begin(),p1=p2++; p2 != point.end(); ++p1,++p2) {
+			vector_c v1=homogenize(*p1);
+			vector_c v2 = homogenize(*p2);
+			
+			drawLine((*p1).first, (*p1).second, (*p2).first, (*p2).second);
+		}
 	}
 
 
@@ -122,12 +129,14 @@ private:
 		}
 	}
 
+	vector_c homogenize(const vector_c& p){}
+
 	bool CohenSutherland(int& x1, int& y1, int& x2, int& y2,double k) {
 		int p1code = getConhenCode(x1, y1);
 		int p2code = getConhenCode(x2, y2);
-		if (p1code | p2code == 0) {
+		if ((p1code | p2code) == 0) {
 			return true;
-		} else if (p1code&p2code != 0) {
+		} else if ((p1code&p2code) != 0) {
 			return false;
 		}
 		changeCohenXY(x1, y1, p1code, k);
