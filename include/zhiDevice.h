@@ -13,7 +13,7 @@ public:
 		}
 		drawBackGround();
 
-		//drawWire();
+		drawWire();
 	}
 
 	void ReSizeScreen(unsigned int **framebuffer, int width, int height) {
@@ -64,10 +64,9 @@ private:
 
 	void drawWire() {
 		for (auto p2 = point.begin(),p1=p2++; p2 != point.end(); ++p1,++p2) {
-			vector_c v1=homogenize(*p1);
-			vector_c v2 = homogenize(*p2);
-			
-			drawLine((*p1).first, (*p1).second, (*p2).first, (*p2).second);
+			vector_c v1 = homogenize(*p1);
+			vector_c v2 = homogenize(*p2);		
+			drawLine(v1.x, v1.y, v2.x, v2.y);
 		}
 	}
 
@@ -129,7 +128,15 @@ private:
 		}
 	}
 
-	vector_c homogenize(const vector_c& p){}
+	vector_c homogenize(const vector_c& p){
+		vector_c vector;
+		float rhw = 1.0f / p.w;
+		vector.x = (p.x * rhw + 1.0f) * width * 0.5f;
+		vector.y = (1.0f - p.y * rhw) * height * 0.5f;
+		vector.z = p.z * rhw;
+		vector.w = 1.0f;
+		return vector;
+	}
 
 	bool CohenSutherland(int& x1, int& y1, int& x2, int& y2,double k) {
 		int p1code = getConhenCode(x1, y1);
@@ -214,12 +221,12 @@ private:
 
 	int getConhenCode(int x, int y) {
 		int code=0;
-		if (y>height) {
+		if (y>=height) {
 			code |= 8;
 		} else if (y<0) {
 			code |= 4;
 		}
-		if (x>width) {
+		if (x>=width) {
 			code |= 2;
 		} else if (x<0) {
 			code |= 1;
@@ -232,3 +239,15 @@ private:
 			framebuffer[(height-y-1)][x] = color;
 	}
 };
+
+class camera {
+public:
+	camera();
+
+private:
+	matrix_c world;
+	matrix_c view;          
+	matrix_c projection;
+};
+
+camera::camera() {}
