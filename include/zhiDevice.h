@@ -1,9 +1,33 @@
 #include<vector>
 #include<utility>
 #include"zhi_matrix.h"
+
+class camera {
+public:
+	matrix_c tranMatrix;
+
+	camera(int, int);
+	void update();
+	void lookat(const vector_c&, const vector_c&, const vector_c&);
+	void lookat(float, float, float, float, float, float, float, float, float);
+	void setWidth(int);
+	void setHeight(int);
+	void setAspect(int, int);
+	void setWorld(matrix_c);
+
+private:
+	matrix_c world;
+	matrix_c view;
+	matrix_c projection;
+	int width, height;
+
+	void set_perspective(float, float, float, float);
+	void set_perspective();
+};
+
 class zhiDevice {
 public:
-	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height) {};
+	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height), camera(width,height){};
 	zhiDevice(unsigned int **framebuffer) :zhiDevice(framebuffer, 800, 600) {};
 	zhiDevice() :zhiDevice(nullptr, 800, 600) {};
 
@@ -12,7 +36,11 @@ public:
 			return;
 		}
 		drawBackGround();
-
+		camera.lookat(3, 0, 0, 0, 0, 0, 0, 0, 1);
+		matrix_c world;
+		world.set_rotate(-1, -0.5, 1, 1);
+		camera.setWorld(world);
+		 
 		drawWire();
 	}
 
@@ -20,6 +48,7 @@ public:
 		zhiDevice::width = width;
 		zhiDevice::height = height;
 		zhiDevice::framebuffer = framebuffer;
+		camera.setAspect(width,height);
 	}
 
 	void insertPoint(int x,int y,int z) {
@@ -32,10 +61,12 @@ public:
 
 	void setWidth(int width) {
 		zhiDevice::width = width;
+		camera.setWidth(width);
 	}
 
 	void setHeight(int height) {
 		zhiDevice::height = height;
+		camera.setHeight(height);
 	}
 
 	void setFrameBuffer(unsigned int **framebuffer) {
@@ -50,6 +81,8 @@ private:
 	int width, height;
 	unsigned int **framebuffer = nullptr;
 
+	camera camera;
+
 	unsigned int backgroundColor = 0x000000;
 	std::vector<vector_c> point;
 
@@ -63,9 +96,11 @@ private:
 
 
 	void drawWire() {
-		for (auto p2 = point.begin(),p1=p2++; p2 != point.end(); ++p1,++p2) {
-			vector_c v1 = homogenize(*p1);
-			vector_c v2 = homogenize(*p2);		
+		for (auto p2 = point.begin(),p1=p2++; p2 != point.end(); ++p1,++p2) {		
+			vector_c c1 = (*p1)*camera.tranMatrix;
+			vector_c c2 = (*p2)*camera.tranMatrix;
+			vector_c v1 = homogenize(c1);
+			vector_c v2 = homogenize(c2);
 			drawLine(v1.x, v1.y, v2.x, v2.y);
 		}
 	}
@@ -234,20 +269,89 @@ private:
 		return code;
 	}
 
-
 	void drawPixel(int x,int y,unsigned int color) {
 			framebuffer[(height-y-1)][x] = color;
 	}
 };
 
-class camera {
-public:
-	camera();
+camera::camera(int width, int height) {
+	camera::width = width;
+	camera::height = height;
+	world.set_identity();
+	view.set_identity();
+	set_perspective();
+	update();
+}
 
-private:
-	matrix_c world;
-	matrix_c view;          
-	matrix_c projection;
-};
+void camera::update() {
+	tranMatrix = (world*view)*projection;
+}
 
-camera::camera() {}
+void camera::set_perspective(float fovy, float aspect, float zn, float zf) {//π/2 长宽比 近裁剪面 远裁剪面
+	float fax = 1.0f / (float)tan(fovy * 0.5f);
+	projection.set_zero();
+	projection[0][0] = (float)(fax / aspect);
+	projection[1][1] = (float)(fax);
+	projection[2][2] = zf / (zf - zn);
+	projection[3][2] = -zn * zf / (zf - zn);
+	projection[2][3] = 1;
+	update();
+}
+
+void camera::set_perspective() {
+	set_perspective(3.1415926f * 0.5f, (float)width / ((float)height), 1.0f, 500.0f);
+}
+
+void camera::lookat(const vector_c & eye, const vector_c & at, const vector_c & up) {
+	vector_c xaxis, yaxis, zaxis;
+
+	zaxis = at - eye;
+	zaxis.normalize();
+	xaxis = up*zaxis;
+	xaxis.normalize();
+	yaxis = zaxis*xaxis;
+
+	view[0][0] = xaxis.x;
+	view[1][0] = xaxis.y;
+	view[2][0] = xaxis.z;
+	view[3][0] = -xaxis.dotproduct(eye);
+
+	view[0][1] = yaxis.x;
+	view[1][1] = yaxis.y;
+	view[2][1] = yaxis.z;
+	view[3][1] = -yaxis.dotproduct(eye);
+
+	view[0][2] = zaxis.x;
+	view[1][2] = zaxis.y;
+	view[2][2] = zaxis.z;
+	view[3][2] = -zaxis.dotproduct(eye);
+
+	view[0][3] = view[1][3] = view[2][3] = 0.0f;
+	view[3][3] = 1.0f;
+	update();
+}
+
+void camera::lookat(float eyex, float eyey, float eyez, float atx, float aty, float atz, float upx, float upy, float upz) {
+	lookat(vector_c(eyex, eyey, eyez, 1.0f), vector_c(atx, aty, atz, 1.0f), vector_c(upx, upy, upz, 1.0f));
+}
+
+void camera::setWidth(int width) {
+	camera::width = width;
+	set_perspective();
+}
+
+void camera::setHeight(int height) {
+	camera::height = height;
+	set_perspective();
+}
+
+void camera::setAspect(int width, int height) {
+	camera::width = width;
+	camera::height = height;
+	set_perspective();
+}
+
+void camera::setWorld(matrix_c world) {
+	camera::world = world;
+	update();
+}
