@@ -2,6 +2,18 @@
 #include<utility>
 #include"zhi_matrix.h"
 
+class Triangle {
+public:
+	vector_c p1;
+	vector_c p2;
+	vector_c p3;
+	unsigned int color= 0x000000;
+	Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) :p1(vector_c(x1, y1, z1)), p2(vector_c(x2, y2, z2)), p3(vector_c(x3, y3, z3)) {};
+	Triangle(vector_c p1, vector_c p2, vector_c p3) :p1(p1), p2(p2), p3(p3) {};
+	Triangle() {};
+
+};
+
 class camera {
 public:
 	matrix_c tranMatrix;
@@ -36,12 +48,20 @@ public:
 			return;
 		}
 		drawBackGround();
-		camera.lookat(3, 0, 0, 0, 0, 0, 0, 0, 1);
-		matrix_c world;
-		world.set_rotate(-1, -0.5, 1, 1);
-		camera.setWorld(world);
 		 
 		drawWire();
+	}
+
+	void setLookAt(const vector_c & eye, const vector_c & at, const vector_c & up) {
+		camera.lookat(eye, at, up);
+	}
+
+	void setLookAt(float eyex, float eyey, float eyez, float atx, float aty, float atz, float upx, float upy, float upz) {
+		camera.lookat(eyex, eyey, eyez, atx, aty, atz, upx, upy, upz);
+	}
+
+	void setWorld(matrix_c world) {
+		camera.setWorld(world);
 	}
 
 	void ReSizeScreen(unsigned int **framebuffer, int width, int height) {
@@ -51,12 +71,36 @@ public:
 		camera.setAspect(width,height);
 	}
 
-	void insertPoint(int x,int y,int z) {
-		point.emplace_back(x,y,z);
+	//void insertPoint(int x,int y,int z) {
+	//	point.emplace_back(x,y,z);
+	//}
+    //
+	//void insertPoint(vector_c p) {
+	//	point.push_back(p);
+	//}
+
+	int insertSquare(vector_c p1, vector_c p2, vector_c p3, vector_c p4) {
+		int re = point.size();
+		point.emplace_back(p1, p2, p3);
+		point.emplace_back(p3, p4, p1);
+		return re;
 	}
 
-	void insertPoint(vector_c p) {
-		point.push_back(p);
+	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
+		int re = point.size();
+		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
+		point.emplace_back(x3, y3, z3, x4, y4, z4, x1, y1, z1);
+		return re;
+	}
+
+	int insertTriangle(vector_c p1, vector_c p2, vector_c p3) {
+		point.emplace_back(p1, p2, p3);
+		return point.size() - 1;
+	}
+
+	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
+		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
+		return point.size() - 1;
 	}
 
 	void setWidth(int width) {
@@ -84,7 +128,7 @@ private:
 	camera camera;
 
 	unsigned int backgroundColor = 0x000000;
-	std::vector<vector_c> point;
+	std::vector<Triangle> point;
 
 	void drawBackGround() {
 		for (int j = 0; j < height; ++j) {
@@ -96,25 +140,33 @@ private:
 
 
 	void drawWire() {
-		for (auto p2 = point.begin(),p1=p2++; p2 != point.end(); ++p1,++p2) {		
-			vector_c c1 = (*p1)*camera.tranMatrix;
-			vector_c c2 = (*p2)*camera.tranMatrix;
+		for (auto ite = point.begin(); ite != point.end(); ++ite) {
+			vector_c p1 = (*ite).p1;
+			vector_c p2 = (*ite).p2;
+			vector_c p3 = (*ite).p3;
+			vector_c c1 = p1*camera.tranMatrix;
+			vector_c c2 = p2*camera.tranMatrix;
+			vector_c c3 = p3*camera.tranMatrix;
 			vector_c v1 = homogenize(c1);
 			vector_c v2 = homogenize(c2);
-			drawLine(v1.x, v1.y, v2.x, v2.y);
+			vector_c v3 = homogenize(c3);
+			drawLine(v1.x, v1.y, v2.x, v2.y, (*ite).color);
+			drawLine(v2.x, v2.y, v3.x, v3.y, (*ite).color);
+			drawLine(v3.x, v3.y, v1.x, v1.y, (*ite).color);
 		}
 	}
-
 
 	void drawLine(int x1, int y1, int x2, int y2) {
 		drawLine(x1, y1, x2, y2, 0x000000);
 	}
 
 	void drawLine(int x1,int y1,int x2,int y2,unsigned int color) {
+		int ox1 = x1, ox2 = x2, oy1 = y1, oy2 = y2;
 		double k = double(y2 - y1) / (x2 - x1), d;
 		if (!CohenSutherland(x1, y1, x2, y2,k)) {
 			return;
 		}	
+		int cx1 = x1, cx2 = x2, cy1 = y1, cy2 = y2;
 		int start, end, x, y;
 		bool xSym=false,xySym=false;
 		if (k<0) {
@@ -270,7 +322,9 @@ private:
 	}
 
 	void drawPixel(int x,int y,unsigned int color) {
-			framebuffer[(height-y-1)][x] = color;
+		if (!(x>=width||x<0||y>=height||y<0)) {
+			framebuffer[(height - y - 1)][x] = color;
+		}			
 	}
 };
 
