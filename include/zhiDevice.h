@@ -8,10 +8,9 @@ public:
 	vector_c p2;
 	vector_c p3;
 	unsigned int color= 0x000000;
-	Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) :p1(vector_c(x1, y1, z1)), p2(vector_c(x2, y2, z2)), p3(vector_c(x3, y3, z3)) {};
-	Triangle(vector_c p1, vector_c p2, vector_c p3) :p1(p1), p2(p2), p3(p3) {};
+	Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3,unsigned int color) :p1(vector_c(x1, y1, z1)), p2(vector_c(x2, y2, z2)), p3(vector_c(x3, y3, z3)),color(color) {};
+	Triangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) :p1(p1), p2(p2), p3(p3),color(color) {};
 	Triangle() {};
-
 };
 
 class camera {
@@ -80,26 +79,42 @@ public:
 	//}
 
 	int insertSquare(vector_c p1, vector_c p2, vector_c p3, vector_c p4) {
+		return insertSquare(p1, p2, p3, p4, 0x000000);
+	}
+
+	int insertSquare(vector_c p1, vector_c p2, vector_c p3, vector_c p4, unsigned int color) {
 		int re = point.size();
-		point.emplace_back(p1, p2, p3);
-		point.emplace_back(p3, p4, p1);
+		point.emplace_back(p1, p2, p3, color);
+		point.emplace_back(p3, p4, p1, color);
 		return re;
 	}
 
 	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
+		return insertSquare(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, 0x000000);
+	}
+
+	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, unsigned int color) {
 		int re = point.size();
-		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
-		point.emplace_back(x3, y3, z3, x4, y4, z4, x1, y1, z1);
+		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
+		point.emplace_back(x3, y3, z3, x4, y4, z4, x1, y1, z1, color);
 		return re;
 	}
 
 	int insertTriangle(vector_c p1, vector_c p2, vector_c p3) {
-		point.emplace_back(p1, p2, p3);
+		return insertTriangle(p1, p2, p3, 0x000000);;
+	}
+
+	int insertTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
+		point.emplace_back(p1, p2, p3, color);
 		return point.size() - 1;
 	}
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
-		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
+		return insertTriangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, 0x000000);
+	}
+
+	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, unsigned int color) {
+		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
 		return point.size() - 1;
 	}
 
