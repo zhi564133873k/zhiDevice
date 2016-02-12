@@ -1,18 +1,10 @@
+#pragma once
 #include<vector>
 #include<utility>
 #include<map>
 #include"zhi_matrix.h"
+#include"Triangle.h"
 
-class Triangle {
-public:
-	vector_c p1;
-	vector_c p2;
-	vector_c p3;
-	unsigned int color= 0x000000;
-	Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3,unsigned int color) :p1(vector_c(x1, y1, z1)), p2(vector_c(x2, y2, z2)), p3(vector_c(x3, y3, z3)),color(color) {};
-	Triangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) :p1(p1), p2(p2), p3(p3),color(color) {};
-	Triangle() {};
-};
 
 class camera {
 public:
@@ -48,8 +40,8 @@ public:
 			return;
 		}
 		drawBackGround();
-		 
-		drawWire();
+		drawplane();
+		//drawWire();
 	}
 
 	void setLookAt(const vector_c & eye, const vector_c & at, const vector_c & up) {
@@ -182,23 +174,93 @@ private:
 		}
 	}
 
+	void drawplane() {
+		for (auto obj = objects.begin(); obj != objects.end(); ++obj) {
+
+			for (auto ite = (obj->second).begin(); ite != (obj->second).end(); ++ite) {
+				vector_c v1 = homogenize((*ite).p1*camera.tranMatrix);
+				vector_c v2 = homogenize((*ite).p2*camera.tranMatrix);
+				vector_c v3 = homogenize((*ite).p3*camera.tranMatrix);
+				drawTriangle(v1, v2, v3,(*ite).color);
+			}
+		}
+	}
 
 	void drawWire() {
 		for (auto obj = objects.begin(); obj != objects.end(); ++obj) {
+
 			for (auto ite = (obj->second).begin(); ite != (obj->second).end(); ++ite) {
-				vector_c p1 = (*ite).p1;
-				vector_c p2 = (*ite).p2;
-				vector_c p3 = (*ite).p3;
-				vector_c c1 = p1*camera.tranMatrix;
-				vector_c c2 = p2*camera.tranMatrix;
-				vector_c c3 = p3*camera.tranMatrix;
-				vector_c v1 = homogenize(c1);
-				vector_c v2 = homogenize(c2);
-				vector_c v3 = homogenize(c3);
+				vector_c v1 = homogenize((*ite).p1*camera.tranMatrix);
+				vector_c v2 = homogenize((*ite).p2*camera.tranMatrix);
+				vector_c v3 = homogenize((*ite).p3*camera.tranMatrix);
 				drawLine(v1.x, v1.y, v2.x, v2.y, (*ite).color);
 				drawLine(v2.x, v2.y, v3.x, v3.y, (*ite).color);
 				drawLine(v3.x, v3.y, v1.x, v1.y, (*ite).color);
 			}
+		}
+	}
+
+	void drawTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {		
+		if (p1.y==p2.y) {
+			if (p3.y<p1.y) {
+				drawFlatTopTri(p1.x, p2.x, p2.y, p3.x, p3.y, color);
+			} else {
+				drawFlatBotTri(p1.x, p2.x, p2.y, p3.x, p3.y, color);
+			}
+		} else if (p2.y == p3.y) {
+			if (p1.y < p2.y) {
+				drawFlatTopTri(p2.x, p3.x, p3.y, p1.x, p1.y, color);
+			} else {
+				drawFlatBotTri(p2.x, p3.x, p3.y, p1.x, p1.y, color);
+			}
+		} else if (p1.y == p3.y) {
+			if (p2.y < p1.y) {
+				drawFlatTopTri(p1.x, p3.x, p3.y, p2.x, p2.y, color);
+			} else {
+				drawFlatBotTri(p1.x, p3.x, p3.y, p2.x, p2.y, color);
+			}
+		} else {
+			if (p1.y<p2.y) {
+				std::swap(p1, p2);
+			}
+			if (p1.y<p3.y) {
+				std::swap(p1, p3);
+			}
+			if (p2.y<p3.y) {
+				std::swap(p2, p3);
+			}
+			float xl = (p2.y - p1.y) * (p3.x - p1.x) / (p3.y - p1.y) + p1.x;
+			drawFlatTopTri(p2.x, xl, p2.y, p3.x, p3.y, color);
+			drawFlatBotTri(xl, p2.x, p2.y, p1.x, p1.y, color);
+		}
+		
+	}
+
+	void drawFlatBotTri(float x1,  float x2, float y, float x3, float y3, unsigned int color) {	
+		if (x1>x2) {
+			std::swap(x1, x2);
+		}
+		double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y);
+		float xs=x1, xe=x2;
+		for (int i = y; i < y3; ++i, xs += k1, xe += k2) {
+			if (xs>xe) {
+				break;
+			}
+			drawLine(xs-1, i, xe, i, color);
+		}
+	}
+
+	void drawFlatTopTri(float x1, float x2, float y, float x3, float y3, unsigned int color) {
+		if (x1>x2) {
+			std::swap(x1, x2);
+		}
+		double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y);
+		float xs = x1, xe = x2;
+		for (int i = y; i >= y3; --i, xs -= k1, xe -= k2) {
+			if (xs>xe) {
+				break;
+			}
+			drawLine(xs-1, i, xe, i, color);
 		}
 	}
 
@@ -281,6 +343,11 @@ private:
 		}
 		changeCohenXY(x1, y1, p1code, k);
 		changeCohenXY(x2, y2, p2code, k);
+		if (p1code | p2code == 15) {
+			if (x1<0||x2<0||y1<0||y2<0) {
+				return false;
+			}
+		}
 		return true;
 	}
 
@@ -368,9 +435,9 @@ private:
 	}
 
 	void drawPixel(int x,int y,unsigned int color) {
-		if (!(x>=width||x<0||y>=height||y<0)) {
+		//if (!(x>=width||x<0||y>=height||y<0)) {
 			framebuffer[(height - y - 1)][x] = color;
-		}			
+		//}			
 	}
 };
 

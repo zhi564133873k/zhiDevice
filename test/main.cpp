@@ -55,7 +55,7 @@ void DrawFunc() {
 		}
 	}
 	if (mwindow.GetKey(VK_SPACE)) {
-		device->deleteObject(cubeNo);
+		//device->deleteObject(cubeNo);
 	}
 	device->setLookAt(pos, pos, pos, 0, 0, 0, 0, 0,-1);
 	matrix_c world;
