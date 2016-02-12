@@ -1,5 +1,6 @@
 #include<vector>
 #include<utility>
+#include<map>
 #include"zhi_matrix.h"
 
 class Triangle {
@@ -70,23 +71,41 @@ public:
 		camera.setAspect(width,height);
 	}
 
-	//void insertPoint(int x,int y,int z) {
-	//	point.emplace_back(x,y,z);
-	//}
-    //
-	//void insertPoint(vector_c p) {
-	//	point.push_back(p);
-	//}
+	int newObject() {
+		int No = MaxObjectNo;
+		if (ifObjectExist(No)) {
+			No = -1;		
+		} else {
+			objectNo = No;
+			++MaxObjectNo;
+		}
+		return No;
+	}
 
-	int insertSquare(vector_c p1, vector_c p2, vector_c p3, vector_c p4) {
+	bool deleteObject(unsigned int objNo) {
+		return objects.erase(objectNo);
+	}
+
+	bool ifObjectExist(unsigned int objNo) {
+		return objects.count(objNo);
+	}
+
+	bool activeObject(unsigned int objNo) {
+		if (ifObjectExist(objNo)) {
+			objectNo = objNo;
+		} else {
+			return false;
+		}
+	}
+
+	int insertSquare(vector_c& p1, vector_c& p2, vector_c& p3, vector_c& p4) {
 		return insertSquare(p1, p2, p3, p4, 0x000000);
 	}
 
-	int insertSquare(vector_c p1, vector_c p2, vector_c p3, vector_c p4, unsigned int color) {
-		int re = point.size();
-		point.emplace_back(p1, p2, p3, color);
-		point.emplace_back(p3, p4, p1, color);
-		return re;
+	int insertSquare(vector_c& p1, vector_c& p2, vector_c& p3, vector_c& p4, unsigned int color) {
+		insertTriangle(p1, p2, p3, color);
+		insertTriangle(p3, p4, p1, color);
+		return objectNo;
 	}
 
 	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
@@ -94,19 +113,23 @@ public:
 	}
 
 	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, unsigned int color) {
-		int re = point.size();
-		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
-		point.emplace_back(x3, y3, z3, x4, y4, z4, x1, y1, z1, color);
-		return re;
+		insertTriangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
+		insertTriangle(x3, y3, z3, x4, y4, z4, x1, y1, z1, color);
+		return objectNo;
 	}
 
-	int insertTriangle(vector_c p1, vector_c p2, vector_c p3) {
+	int insertTriangle(vector_c& p1, vector_c& p2, vector_c& p3) {
 		return insertTriangle(p1, p2, p3, 0x000000);;
 	}
 
 	int insertTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
-		point.emplace_back(p1, p2, p3, color);
-		return point.size() - 1;
+		if (ifObjectExist(objectNo)) {
+			objects[objectNo].emplace_back(p1, p2, p3, color);
+		} else {
+			newObject();
+			objects[objectNo].emplace_back(p1, p2, p3, color);
+		}
+		return objectNo;
 	}
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
@@ -114,8 +137,13 @@ public:
 	}
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, unsigned int color) {
-		point.emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
-		return point.size() - 1;
+		if (ifObjectExist(objectNo)) {
+			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
+		} else {
+			newObject();
+			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
+		}
+		return objectNo;
 	}
 
 	void setWidth(int width) {
@@ -141,9 +169,10 @@ private:
 	unsigned int **framebuffer = nullptr;
 
 	camera camera;
-
+	unsigned int objectNo=0;
+	unsigned int MaxObjectNo = 0;
 	unsigned int backgroundColor = 0x000000;
-	std::vector<Triangle> point;
+	std::map<int, std::vector<Triangle>> objects;
 
 	void drawBackGround() {
 		for (int j = 0; j < height; ++j) {
@@ -155,19 +184,21 @@ private:
 
 
 	void drawWire() {
-		for (auto ite = point.begin(); ite != point.end(); ++ite) {
-			vector_c p1 = (*ite).p1;
-			vector_c p2 = (*ite).p2;
-			vector_c p3 = (*ite).p3;
-			vector_c c1 = p1*camera.tranMatrix;
-			vector_c c2 = p2*camera.tranMatrix;
-			vector_c c3 = p3*camera.tranMatrix;
-			vector_c v1 = homogenize(c1);
-			vector_c v2 = homogenize(c2);
-			vector_c v3 = homogenize(c3);
-			drawLine(v1.x, v1.y, v2.x, v2.y, (*ite).color);
-			drawLine(v2.x, v2.y, v3.x, v3.y, (*ite).color);
-			drawLine(v3.x, v3.y, v1.x, v1.y, (*ite).color);
+		for (auto obj = objects.begin(); obj != objects.end(); ++obj) {
+			for (auto ite = (obj->second).begin(); ite != (obj->second).end(); ++ite) {
+				vector_c p1 = (*ite).p1;
+				vector_c p2 = (*ite).p2;
+				vector_c p3 = (*ite).p3;
+				vector_c c1 = p1*camera.tranMatrix;
+				vector_c c2 = p2*camera.tranMatrix;
+				vector_c c3 = p3*camera.tranMatrix;
+				vector_c v1 = homogenize(c1);
+				vector_c v2 = homogenize(c2);
+				vector_c v3 = homogenize(c3);
+				drawLine(v1.x, v1.y, v2.x, v2.y, (*ite).color);
+				drawLine(v2.x, v2.y, v3.x, v3.y, (*ite).color);
+				drawLine(v3.x, v3.y, v1.x, v1.y, (*ite).color);
+			}
 		}
 	}
 
