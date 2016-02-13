@@ -31,9 +31,19 @@ private:
 
 class zhiDevice {
 public:
-	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height), camera(width,height){};
+	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height), camera(width,height){
+		zbuf = (char*)malloc(sizeof(float*) * height + width * sizeof(float) * height+64);
+		zbuffer = (float**)zbuf;
+		for (int i = 0; i < height; ++i) {
+			zbuffer[i] = (float*)(zbuf+sizeof(float*) * height + width * sizeof(float)* i);
+		}
+	};
 	zhiDevice(unsigned int **framebuffer) :zhiDevice(framebuffer, 800, 600) {};
 	zhiDevice() :zhiDevice(nullptr, 800, 600) {};
+
+	~zhiDevice() {
+		free(zbuf);
+	}
 
 	void drawFrames() {
 		if (framebuffer==nullptr) {
@@ -42,6 +52,15 @@ public:
 		drawBackGround();
 		drawplane();
 		//drawWire();
+	}
+
+	void clear() {
+		objects.clear();
+		for (int i = 0; i < height; ++i) {
+			for (int j = 0; j < width; ++j) {
+				zbuffer[i][j] = -1.0;
+			}
+		}
 	}
 
 	void setLookAt(const vector_c & eye, const vector_c & at, const vector_c & up) {
@@ -61,6 +80,12 @@ public:
 		zhiDevice::height = height;
 		zhiDevice::framebuffer = framebuffer;
 		camera.setAspect(width,height);
+		free(zbuf);
+		zbuf = (char*)malloc(sizeof(float*) * height + width * sizeof(float) * height + 64);
+		zbuffer = (float**)zbuf;
+		for (int i = 0; i < height; ++i) {
+			zbuffer[i] = (float*)(zbuf + sizeof(float*) * height + width * sizeof(float)* i);
+		}
 	}
 
 	int newObject() {
@@ -159,6 +184,8 @@ public:
 private:
 	int width, height;
 	unsigned int **framebuffer = nullptr;
+	float **zbuffer = nullptr;
+	char* zbuf = nullptr;//整个深度缓存区 方便一次释放内存
 
 	camera camera;
 	unsigned int objectNo=0;
@@ -170,13 +197,13 @@ private:
 		for (int j = 0; j < height; ++j) {
 			for (int i = 0; i < width; ++i) {
 				drawPixel(i, j, backgroundColor);
+				zbuffer[height-j-1][i] = -1;
 			}
 		}
 	}
 
 	void drawplane() {
 		for (auto obj = objects.begin(); obj != objects.end(); ++obj) {
-
 			for (auto ite = (obj->second).begin(); ite != (obj->second).end(); ++ite) {
 				vector_c v1 = homogenize((*ite).p1*camera.tranMatrix);
 				vector_c v2 = homogenize((*ite).p2*camera.tranMatrix);
@@ -200,67 +227,107 @@ private:
 		}
 	}
 
-	void drawTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {		
-		if (p1.y==p2.y) {
-			if (p3.y<p1.y) {
-				drawFlatTopTri(p1.x, p2.x, p2.y, p3.x, p3.y, color);
-			} else {
-				drawFlatBotTri(p1.x, p2.x, p2.y, p3.x, p3.y, color);
-			}
-		} else if (p2.y == p3.y) {
-			if (p1.y < p2.y) {
-				drawFlatTopTri(p2.x, p3.x, p3.y, p1.x, p1.y, color);
-			} else {
-				drawFlatBotTri(p2.x, p3.x, p3.y, p1.x, p1.y, color);
-			}
-		} else if (p1.y == p3.y) {
-			if (p2.y < p1.y) {
-				drawFlatTopTri(p1.x, p3.x, p3.y, p2.x, p2.y, color);
-			} else {
-				drawFlatBotTri(p1.x, p3.x, p3.y, p2.x, p2.y, color);
-			}
+	void drawTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
+		if (p1.y < p2.y) {
+			std::swap(p1, p2);
+		}
+		if (p1.y < p3.y) {
+			std::swap(p1, p3);
+		}
+		if (p2.y < p3.y) {
+			std::swap(p2, p3);
+		}
+		if (p2.y==p3.y) {//平底
+			drawFlatBotTri(p2, p3, p1, color);
+		} else if (p2.y == p1.y) {//平顶
+			drawFlatTopTri(p1, p2, p3, color);
 		} else {
-			if (p1.y<p2.y) {
-				std::swap(p1, p2);
-			}
-			if (p1.y<p3.y) {
-				std::swap(p1, p3);
-			}
-			if (p2.y<p3.y) {
-				std::swap(p2, p3);
-			}
 			float xl = (p2.y - p1.y) * (p3.x - p1.x) / (p3.y - p1.y) + p1.x;
-			drawFlatTopTri(p2.x, xl, p2.y, p3.x, p3.y, color);
-			drawFlatBotTri(xl, p2.x, p2.y, p1.x, p1.y, color);
+			drawFlatBotTri(p2, p3, p1, color);
+			drawFlatTopTri(p1, p2, p3, color);
 		}
-		
+
+		//if (p1.y == p2.y) {
+		//	if (p3.y < p1.y) {
+		//		drawFlatTopTri(p1.x, p2.x, p2.y, p3.x, p3.y, p1.w, p2.w, p3.w, color);
+		//	} else {
+		//		drawFlatBotTri(p1.x, p2.x, p2.y, p3.x, p3.y, p1.w, p2.w, p3.w, color);
+		//	}
+		//} else if (p2.y == p3.y) {
+		//	if (p1.y < p2.y) {
+		//		drawFlatTopTri(p2.x, p3.x, p3.y, p1.x, p1.y, p2.w, p3.w, p1.w, color);
+		//	} else {
+		//		drawFlatBotTri(p2.x, p3.x, p3.y, p1.x, p1.y, p2.w, p3.w, p1.w, color);
+		//	}
+		//} else if (p1.y == p3.y) {
+		//	if (p2.y < p1.y) {
+		//		drawFlatTopTri(p1.x, p3.x, p3.y, p2.x, p2.y, p1.w, p3.w, p2.w, color);
+		//	} else {
+		//		drawFlatBotTri(p1.x, p3.x, p3.y, p2.x, p2.y, p1.w, p3.w, p2.w, color);
+		//	}
+		//} else {
+		//	if (p1.y < p2.y) {
+		//		std::swap(p1, p2);
+		//	}
+		//	if (p1.y < p3.y) {
+		//		std::swap(p1, p3);
+		//	}
+		//	if (p2.y < p3.y) {
+		//		std::swap(p2, p3);
+		//	}
+		//	float xl = (p2.y - p1.y) * (p3.x - p1.x) / (p3.y - p1.y) + p1.x;
+		//	drawFlatTopTri(p2.x, xl, p2.y, p3.x, p3.y, p2.w, p1.w, p3.w, color);
+		//	drawFlatBotTri(xl, p2.x, p2.y, p1.x, p1.y, p3.w, p2.w, p1.w, color);
+		//}
 	}
 
-	void drawFlatBotTri(float x1,  float x2, float y, float x3, float y3, unsigned int color) {	
-		if (x1>x2) {
-			std::swap(x1, x2);
-		}
-		double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y);
-		float xs=x1, xe=x2;
-		for (int i = y; i < y3; ++i, xs += k1, xe += k2) {
-			if (xs>xe) {
-				break;
-			}
-			drawLine(xs-1, i, xe, i, color);
-		}
+	//平底三角形 p1,p2为y相同的点
+	void drawFlatBotTri(vector_c& p1, vector_c& p2, vector_c& p3, unsigned int color) {
+
+		//z1 = 1.0f / z1;
+		//z2 = 1.0f / z2;
+		//z3 = 1.0f / z3;
+		//if (x1 > x2) {
+		//	std::swap(x1, x2);
+		//	std::swap(z1, z2);
+		//}
+
+		//double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y), zp1 = (z3 - z1) / (y3 - y), zp2 = (z3 - z2) / (y3 - y);
+		//float xs = x1, xe = x2, zs = z1, ze = z2;
+		//for (int i = y; i < y3; ++i, xs += k1, xe += k2, zs += zp1, ze += zp2) {
+		//	if (xs > xe) {
+		//		break;
+		//	}
+		//	drawHorizLine(xs - 1, xe, i, zs, ze, color);
+		//}
 	}
 
-	void drawFlatTopTri(float x1, float x2, float y, float x3, float y3, unsigned int color) {
-		if (x1>x2) {
-			std::swap(x1, x2);
-		}
-		double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y);
-		float xs = x1, xe = x2;
-		for (int i = y; i >= y3; --i, xs -= k1, xe -= k2) {
-			if (xs>xe) {
-				break;
+	//平顶三角形 p1,p2为y相同的点
+	void drawFlatTopTri(vector_c& p1, vector_c& p2, vector_c& p3, unsigned int color) {
+		//z1 = 1.0f / z1;
+		//z2 = 1.0f / z2;
+		//z3 = 1.0f / z3;
+		//if (x1 > x2) {
+		//	std::swap(x1, x2);
+		//	std::swap(z1, z2);
+		//}
+		//double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y), zp1 = (z3 - z1) / (y3 - y), zp2 = (z3 - z2) / (y3 - y);
+		//float xs = x1, xe = x2, zs = z1, ze = z2;
+		//for (int i = y; i >= y3; --i, xs -= k1, xe -= k2, zs -= zp1, ze -= zp2) {
+		//	if (xs > xe) {
+		//		break;
+		//	}
+		//	drawHorizLine(xs - 1, xe, i, zs, ze, color);
+		//}
+	}
+
+	void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {
+		float z = zs, zk = (ze - zs) / (x2 - x1);
+		for (int i = x1; i < x2; ++i, z += zk) {
+			if (z > zbuffer[height - y-1][i]) {
+				drawPixel(i, y, color);
+				zbuffer[height - y-1][i] = z;
 			}
-			drawLine(xs-1, i, xe, i, color);
 		}
 	}
 
@@ -329,7 +396,8 @@ private:
 		vector.x = (p.x * rhw + 1.0f) * width * 0.5f;
 		vector.y = (1.0f - p.y * rhw) * height * 0.5f;
 		vector.z = p.z * rhw;
-		vector.w = 1.0f;
+		//vector.w = 1.0f;
+		vector.w = p.w;
 		return vector;
 	}
 
