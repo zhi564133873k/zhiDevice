@@ -3,7 +3,7 @@
 #include<utility>
 #include<map>
 #include"zhi_matrix.h"
-#include"Triangle.h"
+#include"figure.h"
 
 
 class camera {
