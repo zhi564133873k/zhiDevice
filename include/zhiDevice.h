@@ -46,12 +46,16 @@ public:
 	}
 
 	void drawFrames() {
-		if (framebuffer==nullptr) {
+		if (framebuffer == nullptr) {
 			return;
 		}
 		drawBackGround();
-		drawplane();
-		//drawWire();
+		for (auto obj : objects) {
+			for (auto ite : obj.second) {
+				drawplane(projection(ite.p1), projection(ite.p2), projection(ite.p3));
+				//drawWire(projection(ite.p1.point), projection(ite.p2.point), projection(ite.p3.point));
+			}
+		}
 	}
 
 	void clear() {
@@ -141,10 +145,10 @@ public:
 
 	int insertTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].emplace_back(p1, p2, p3, color);
+			objects[objectNo].emplace_back(p1, p2, p3);
 		} else {
 			newObject();
-			objects[objectNo].emplace_back(p1, p2, p3, color);
+			objects[objectNo].emplace_back(p1, p2, p3);
 		}
 		return objectNo;
 	}
@@ -155,10 +159,10 @@ public:
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, unsigned int color) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
+			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
 		} else {
 			newObject();
-			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
+			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
 		}
 		return objectNo;
 	}
@@ -202,29 +206,27 @@ private:
 		}
 	}
 
-	void drawplane() {
-		for (auto obj = objects.begin(); obj != objects.end(); ++obj) {
-			for (auto ite = (obj->second).begin(); ite != (obj->second).end(); ++ite) {
-				vector_c v1 = homogenize((*ite).p1*camera.tranMatrix);
-				vector_c v2 = homogenize((*ite).p2*camera.tranMatrix);
-				vector_c v3 = homogenize((*ite).p3*camera.tranMatrix);
-				drawTriangle(v1, v2, v3,(*ite).color);
-			}
-		}
+	void drawplane(vertex v1, vertex v2, vertex v3) {
+		//drawTriangle(v1, v2, v3, 0x000000);
 	}
 
-	void drawWire() {
-		for (auto obj = objects.begin(); obj != objects.end(); ++obj) {
+	void drawWire(vector_c v1, vector_c v2, vector_c v3) {
+			drawLine(v1.x, v1.y, v2.x, v2.y, 0x000000);
+			drawLine(v2.x, v2.y, v3.x, v3.y, 0x000000);
+			drawLine(v3.x, v3.y, v1.x, v1.y, 0x000000);
+	}
 
-			for (auto ite = (obj->second).begin(); ite != (obj->second).end(); ++ite) {
-				vector_c v1 = homogenize((*ite).p1*camera.tranMatrix);
-				vector_c v2 = homogenize((*ite).p2*camera.tranMatrix);
-				vector_c v3 = homogenize((*ite).p3*camera.tranMatrix);
-				drawLine(v1.x, v1.y, v2.x, v2.y, (*ite).color);
-				drawLine(v2.x, v2.y, v3.x, v3.y, (*ite).color);
-				drawLine(v3.x, v3.y, v1.x, v1.y, (*ite).color);
-			}
-		}
+	vertex projection(vertex p) {
+		p.point = p.point*camera.tranMatrix;
+		float w = p.point.w;
+		homogenize(p.point);
+		p.point.w = w;
+		p.rhw_init();
+		return p;
+	}
+
+	vector_c projection(vector_c p) {
+		return homogenize(p*camera.tranMatrix);
 	}
 
 	void drawTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
@@ -396,8 +398,8 @@ private:
 		vector.x = (p.x * rhw + 1.0f) * width * 0.5f;
 		vector.y = (1.0f - p.y * rhw) * height * 0.5f;
 		vector.z = p.z * rhw;
-		//vector.w = 1.0f;
-		vector.w = p.w;
+		vector.w = 1.0f;
+		//vector.w = p.w;
 		return vector;
 	}
 
