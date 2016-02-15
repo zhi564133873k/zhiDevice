@@ -207,7 +207,16 @@ private:
 	}
 
 	void drawplane(vertex v1, vertex v2, vertex v3) {
-		//drawTriangle(v1, v2, v3, 0x000000);
+		for (auto trap : getTrap(v1, v2, v3)) {
+			int top, bottom;
+			for (int i = top; i < bottom, i < height; ++i) {
+				if (i >= 0) {
+					/*
+					*MARK
+					*/
+				}
+			}		
+		}
 	}
 
 	void drawWire(vector_c v1, vector_c v2, vector_c v3) {
