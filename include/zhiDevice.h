@@ -187,8 +187,8 @@ public:
 
 private:
 	int width, height;
-	unsigned int **framebuffer = nullptr;
-	float **zbuffer = nullptr;
+	unsigned int** framebuffer = nullptr;
+	float** zbuffer = nullptr;
 	char* zbuf = nullptr;//整个深度缓存区 方便一次释放内存
 
 	camera camera;
@@ -208,12 +208,11 @@ private:
 
 	void drawplane(vertex v1, vertex v2, vertex v3) {
 		for (auto trap : getTrap(v1, v2, v3)) {
-			int top, bottom;
+			int top = (trap.top + 0.5f), bottom = (trap.bottom + 0.5f);
 			for (int i = top; i < bottom, i < height; ++i) {
 				if (i >= 0) {
-					/*
-					*MARK
-					*/
+					trap.trapezoid_edge_interp((float)i + 0.5f);
+					scanline_c scanline(trap, i);
 				}
 			}		
 		}
@@ -238,109 +237,48 @@ private:
 		return homogenize(p*camera.tranMatrix);
 	}
 
-	void drawTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
-		if (p1.y < p2.y) {
-			std::swap(p1, p2);
-		}
-		if (p1.y < p3.y) {
-			std::swap(p1, p3);
-		}
-		if (p2.y < p3.y) {
-			std::swap(p2, p3);
-		}
-		if (p2.y==p3.y) {//平底
-			drawFlatBotTri(p2, p3, p1, color);
-		} else if (p2.y == p1.y) {//平顶
-			drawFlatTopTri(p1, p2, p3, color);
-		} else {
-			float xl = (p2.y - p1.y) * (p3.x - p1.x) / (p3.y - p1.y) + p1.x;
-			drawFlatBotTri(p2, p3, p1, color);
-			drawFlatTopTri(p1, p2, p3, color);
-		}
-
-		//if (p1.y == p2.y) {
-		//	if (p3.y < p1.y) {
-		//		drawFlatTopTri(p1.x, p2.x, p2.y, p3.x, p3.y, p1.w, p2.w, p3.w, color);
-		//	} else {
-		//		drawFlatBotTri(p1.x, p2.x, p2.y, p3.x, p3.y, p1.w, p2.w, p3.w, color);
-		//	}
-		//} else if (p2.y == p3.y) {
-		//	if (p1.y < p2.y) {
-		//		drawFlatTopTri(p2.x, p3.x, p3.y, p1.x, p1.y, p2.w, p3.w, p1.w, color);
-		//	} else {
-		//		drawFlatBotTri(p2.x, p3.x, p3.y, p1.x, p1.y, p2.w, p3.w, p1.w, color);
-		//	}
-		//} else if (p1.y == p3.y) {
-		//	if (p2.y < p1.y) {
-		//		drawFlatTopTri(p1.x, p3.x, p3.y, p2.x, p2.y, p1.w, p3.w, p2.w, color);
-		//	} else {
-		//		drawFlatBotTri(p1.x, p3.x, p3.y, p2.x, p2.y, p1.w, p3.w, p2.w, color);
-		//	}
-		//} else {
-		//	if (p1.y < p2.y) {
-		//		std::swap(p1, p2);
-		//	}
-		//	if (p1.y < p3.y) {
-		//		std::swap(p1, p3);
-		//	}
-		//	if (p2.y < p3.y) {
-		//		std::swap(p2, p3);
-		//	}
-		//	float xl = (p2.y - p1.y) * (p3.x - p1.x) / (p3.y - p1.y) + p1.x;
-		//	drawFlatTopTri(p2.x, xl, p2.y, p3.x, p3.y, p2.w, p1.w, p3.w, color);
-		//	drawFlatBotTri(xl, p2.x, p2.y, p1.x, p1.y, p3.w, p2.w, p1.w, color);
-		//}
-	}
-
-	//平底三角形 p1,p2为y相同的点
-	void drawFlatBotTri(vector_c& p1, vector_c& p2, vector_c& p3, unsigned int color) {
-
-		//z1 = 1.0f / z1;
-		//z2 = 1.0f / z2;
-		//z3 = 1.0f / z3;
-		//if (x1 > x2) {
-		//	std::swap(x1, x2);
-		//	std::swap(z1, z2);
-		//}
-
-		//double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y), zp1 = (z3 - z1) / (y3 - y), zp2 = (z3 - z2) / (y3 - y);
-		//float xs = x1, xe = x2, zs = z1, ze = z2;
-		//for (int i = y; i < y3; ++i, xs += k1, xe += k2, zs += zp1, ze += zp2) {
-		//	if (xs > xe) {
-		//		break;
-		//	}
-		//	drawHorizLine(xs - 1, xe, i, zs, ze, color);
-		//}
-	}
-
-	//平顶三角形 p1,p2为y相同的点
-	void drawFlatTopTri(vector_c& p1, vector_c& p2, vector_c& p3, unsigned int color) {
-		//z1 = 1.0f / z1;
-		//z2 = 1.0f / z2;
-		//z3 = 1.0f / z3;
-		//if (x1 > x2) {
-		//	std::swap(x1, x2);
-		//	std::swap(z1, z2);
-		//}
-		//double k1 = (x3 - x1) / (y3 - y), k2 = (x3 - x2) / (y3 - y), zp1 = (z3 - z1) / (y3 - y), zp2 = (z3 - z2) / (y3 - y);
-		//float xs = x1, xe = x2, zs = z1, ze = z2;
-		//for (int i = y; i >= y3; --i, xs -= k1, xe -= k2, zs -= zp1, ze -= zp2) {
-		//	if (xs > xe) {
-		//		break;
-		//	}
-		//	drawHorizLine(xs - 1, xe, i, zs, ze, color);
-		//}
-	}
-
-	void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {
-		float z = zs, zk = (ze - zs) / (x2 - x1);
-		for (int i = x1; i < x2; ++i, z += zk) {
-			if (z > zbuffer[height - y-1][i]) {
-				drawPixel(i, y, color);
-				zbuffer[height - y-1][i] = z;
+	void draw_scanline(const scanline_c& scanline) {
+		unsigned int *framebuffer = zhiDevice::framebuffer[scanline.y];
+		float *zbuffer = zhiDevice::zbuffer[scanline.y];
+		for (int w = scanline.w, x = scanline.x; w > 0; x++, w--) {
+			if (x >= 0 && x < width) {
+				if (scanline.v.rhw >= zbuffer[x]) {
+					float w = 1.0f / scanline.v.rhw;
+					zbuffer[x] = scanline.v.rhw;
+					//if (render_state & RENDER_STATE_COLOR) {
+						float r = scanline.v.color.r * w;
+						float g = scanline.v.color.g * w;
+						float b = scanline.v.color.b * w;
+						int R = (int)(r * 255.0f);
+						int G = (int)(g * 255.0f);
+						int B = (int)(b * 255.0f);
+						R = CMID(R, 0, 255);
+						G = CMID(G, 0, 255);
+						B = CMID(B, 0, 255);
+						framebuffer[x] = (R << 16) | (G << 8) | (B);
+					//}
+					//if (render_state & RENDER_STATE_TEXTURE) {
+					//	float u = scanline->v.tc.u * w;
+					//	float v = scanline->v.tc.v * w;
+					//	IUINT32 cc = device_texture_read(device, u, v);
+					//	framebuffer[x] = cc;
+					//}
+				}
 			}
+			scanline.v += scanline.step;
+			if (x >= width) break;
 		}
 	}
+
+	//void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {
+	//	float z = zs, zk = (ze - zs) / (x2 - x1);
+	//	for (int i = x1; i < x2; ++i, z += zk) {
+	//		if (z > zbuffer[height - y-1][i]) {
+	//			drawPixel(i, y, color);
+	//			zbuffer[height - y-1][i] = z;
+	//		}
+	//	}
+	//}
 
 	void drawLine(int x1, int y1, int x2, int y2) {
 		drawLine(x1, y1, x2, y2, 0x000000);
