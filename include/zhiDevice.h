@@ -5,6 +5,7 @@
 #include"zhi_matrix.h"
 #include"figure.h"
 
+const unsigned int defaultColor = 0x000000;
 
 class camera {
 public:
@@ -119,31 +120,24 @@ public:
 		}
 	}
 
-	int insertSquare(vector_c& p1, vector_c& p2, vector_c& p3, vector_c& p4) {
-		return insertSquare(p1, p2, p3, p4, 0x000000);
-	}
 
-	int insertSquare(vector_c& p1, vector_c& p2, vector_c& p3, vector_c& p4, unsigned int color) {
-		insertTriangle(p1, p2, p3, color);
-		insertTriangle(p3, p4, p1, color);
+	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4) {
+		insertTriangle(p1, p2, p3);
+		insertTriangle(p3, p4, p1);
 		return objectNo;
 	}
 
 	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
-		return insertSquare(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, 0x000000);
+		return insertSquare(x1, y1, z1, defaultColor, x2, y2, z2, defaultColor, x3, y3, z3, defaultColor, x3, y3, z3, defaultColor);
 	}
 
-	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, unsigned int color) {
-		insertTriangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, color);
-		insertTriangle(x3, y3, z3, x4, y4, z4, x1, y1, z1, color);
+	int insertSquare(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3, float x4, float y4, float z4, unsigned int color4) {
+		insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+		insertTriangle(x3, y3, z3, color3, x4, y4, z4, color4, x1, y1, z1, color1);
 		return objectNo;
 	}
 
-	int insertTriangle(vector_c& p1, vector_c& p2, vector_c& p3) {
-		return insertTriangle(p1, p2, p3, 0x000000);;
-	}
-
-	int insertTriangle(vector_c p1, vector_c p2, vector_c p3, unsigned int color) {
+	int insertTriangle(vertex p1, vertex p2, vertex p3) {
 		if (ifObjectExist(objectNo)) {
 			objects[objectNo].emplace_back(p1, p2, p3);
 		} else {
@@ -154,15 +148,15 @@ public:
 	}
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
-		return insertTriangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, 0x000000);
+		return insertTriangle(x1, y1, z1, defaultColor, x2, y2, z2, defaultColor, x3, y3, z3, defaultColor);
 	}
 
-	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, unsigned int color) {
+	int insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
+			objects[objectNo].emplace_back(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		} else {
 			newObject();
-			objects[objectNo].emplace_back(x1, y1, z1, x2, y2, z2, x3, y3, z3);
+			objects[objectNo].emplace_back(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		}
 		return objectNo;
 	}
@@ -201,18 +195,23 @@ private:
 		for (int j = 0; j < height; ++j) {
 			for (int i = 0; i < width; ++i) {
 				drawPixel(i, j, backgroundColor);
-				zbuffer[height-j-1][i] = -1;
+				if (zbuffer[j][i]==0) {
+					int k = 1;
+				}
+				zbuffer[j][i] = 0;
 			}
 		}
 	}
 
 	void drawplane(vertex v1, vertex v2, vertex v3) {
-		for (auto trap : getTrap(v1, v2, v3)) {
-			int top = (trap.top + 0.5f), bottom = (trap.bottom + 0.5f);
+		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
+		for (auto trap : trap_vect) {
+			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
 			for (int i = top; i < bottom, i < height; ++i) {
 				if (i >= 0) {
 					trap.trapezoid_edge_interp((float)i + 0.5f);
 					scanline_c scanline(trap, i);
+					draw_scanline(scanline);
 				}
 			}		
 		}
@@ -227,7 +226,7 @@ private:
 	vertex projection(vertex p) {
 		p.point = p.point*camera.tranMatrix;
 		float w = p.point.w;
-		homogenize(p.point);
+		p.point=homogenize(p.point);
 		p.point.w = w;
 		p.rhw_init();
 		return p;
@@ -238,13 +237,17 @@ private:
 	}
 
 	void draw_scanline(const scanline_c& scanline) {
-		unsigned int *framebuffer = zhiDevice::framebuffer[scanline.y];
-		float *zbuffer = zhiDevice::zbuffer[scanline.y];
-		for (int w = scanline.w, x = scanline.x; w > 0; x++, w--) {
+		//unsigned int *framebuffer = zhiDevice::framebuffer[scanline.y];
+		//float *zbuffer = zhiDevice::zbuffer[scanline.y];
+		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
-				if (scanline.v.rhw >= zbuffer[x]) {
+				//float zbu = zbuffer[scanline.y][x];
+				if (scanline.y<=100) {
+					int m = 1;
+				}
+				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
-					zbuffer[x] = scanline.v.rhw;
+					zbuffer[scanline.y][x] = scanline.v.rhw;
 					//if (render_state & RENDER_STATE_COLOR) {
 						float r = scanline.v.color.r * w;
 						float g = scanline.v.color.g * w;
@@ -255,7 +258,8 @@ private:
 						R = CMID(R, 0, 255);
 						G = CMID(G, 0, 255);
 						B = CMID(B, 0, 255);
-						framebuffer[x] = (R << 16) | (G << 8) | (B);
+						//framebuffer[x] = (R << 16) | (G << 8) | (B);
+						drawPixel(x, scanline.y, (R << 16) | (G << 8) | (B));
 					//}
 					//if (render_state & RENDER_STATE_TEXTURE) {
 					//	float u = scanline->v.tc.u * w;
@@ -453,7 +457,8 @@ private:
 
 	void drawPixel(int x,int y,unsigned int color) {
 		//if (!(x>=width||x<0||y>=height||y<0)) {
-			framebuffer[(height - y - 1)][x] = color;
+			//framebuffer[(height - y - 1)][x] = color;
+		framebuffer[y][x] = color;
 		//}			
 	}
 };

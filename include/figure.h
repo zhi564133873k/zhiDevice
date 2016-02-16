@@ -14,11 +14,21 @@ class vertex {
 	friend std::vector<trapezoid> getTrap(vertex, vertex, vertex);
 public:	
 	vector_c point; 
-	texcoord tc; 
-	color color;
-	float rhw; 
+	texcoord mutable tc;
+	color mutable color;
+	float mutable rhw;
 
 	vertex(float x, float y, float z) :point(x, y, z) {};
+	vertex(float x, float y, float z,unsigned int color) :point(x, y, z) {
+		vertex::color.r = color >>16 ;
+		vertex::color.g = (color >> 8) - ((int)(vertex::color.r) << 8);
+		vertex::color.b = color - ((int)(vertex::color.r) << 16) - ((int)(vertex::color.g) << 8);
+	};
+	vertex(float x, float y, float z, float r, float g, float b) :point(x, y, z) {
+		color.r = r;
+		color.g = g;
+		color.b = b;
+	};
 	vertex(vector_c v):point(v) {};
 	vertex() {};
 	//vertex(const vertex& v):point(v.point),tc(v.tc),color(v.color),rhw(rhw) {};
@@ -56,7 +66,7 @@ public:
 	vertex p1;
 	vertex p2;
 	vertex p3;
-	Triangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) :p1(vertex(x1, y1, z1)), p2(vertex(x2, y2, z2)), p3(vertex(x3, y3, z3)) {};
+	Triangle(float x1, float y1, float z1,unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) :p1(vertex(x1, y1, z1)), p2(vertex(x2, y2, z2)), p3(vertex(x3, y3, z3)) {};
 	Triangle(vertex p1, vertex p2, vertex p3) :p1(p1), p2(p2), p3(p3) {};
 	Triangle() {};
 };
@@ -134,14 +144,18 @@ std::vector<trapezoid> getTrap(vertex p1, vertex p2, vertex p3) {
 			if (trap.top < trap.bottom)
 				trap_vect.push_back(trap);
 		} else {
-			float xl = (p2.point.y - p1.point.y) * (p3.point.x - p1.point.x) / (p3.point.y - p1.point.y) + p1.point.x;
+			float xl = p1.point.x + (p2.point.x - p3.point.x) * (p1.point.y - p3.point.y) / (p2.point.y - p3.point.y);
 			if (xl <= p1.point.x) {		// triangle left
 				trapezoid trap1(p3.point.y, p2.point.y, p3, p2, p3, p1);
-				trapezoid trap2(p2.point.y, p1.point.y, p2, p1, p3, p1);
+				trapezoid trap2(p2.point.y, p1.point.y, p2, p1, p3, p1);	
+				trap_vect.push_back(trap1);
+				trap_vect.push_back(trap2);
 			} else {					// triangle right
 				trapezoid trap1(p3.point.y, p2.point.y, p3, p1, p3, p2);
 				trapezoid trap2(p2.point.y, p1.point.y, p3, p1, p2, p1);
-			}
+				trap_vect.push_back(trap1);
+				trap_vect.push_back(trap2);
+			}			
 		}
 	}
 	return trap_vect;

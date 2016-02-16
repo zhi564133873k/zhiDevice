@@ -7,18 +7,18 @@ void DrawFunc();
 void reSizeScreen();
 void forward();
 void backward();
-float pos = 3;
-float alpha = 0;
+float pos = 3.5;
+float alpha = 1;
 int cubeNo;
-vector_c cube[8] = {
-	vector_c(1,1,1),
-	vector_c(-1,1,1),
-	vector_c(-1,-1,1),
-	vector_c(1,-1,1),
-	vector_c(1,1,-1),
-	vector_c(-1,1,-1),
-	vector_c(-1,-1,-1),
-	vector_c(1,-1,-1)
+vertex cube[8] = {
+	vertex(1,-1,1, 1.0, 0.2, 0.2),
+	vertex(-1,-1,1,0.2, 1.0, 0.2),
+	vertex(-1,1,1, 0.2, 0.2, 1.0),
+	vertex(1,1,1,1.0, 0.2, 1.0),
+	vertex(1,-1,-1,1.0, 1.0, 0.2),
+	vertex(-1,-1,-1,0.2, 1.0, 1.0),
+	vertex(-1,1,-1, 1.0, 0.3, 0.3),
+	vertex(1,1,-1,0.2, 1.0, 0.3)
 };
 
 int WINAPI WinMain(HINSTANCE	hInstance,
@@ -30,12 +30,12 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 
 	device=new zhiDevice(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
 	cubeNo = device->newObject();
-	device->insertSquare(cube[0], cube[1], cube[2], cube[3], 0xFF0000);
-	device->insertSquare(cube[7], cube[4], cube[0], cube[3],0x00FF00);
-	device->insertSquare(cube[4], cube[5], cube[1], cube[0],0x0000FF);
-	device->insertSquare(cube[1], cube[5], cube[6], cube[2],0xFFFF00);
-	device->insertSquare(cube[5], cube[4], cube[7], cube[6],0x00FFFF);
-	device->insertSquare(cube[3], cube[2], cube[6], cube[7],0xFF00FF);
+	device->insertSquare(cube[0], cube[1], cube[2], cube[3]);
+	device->insertSquare(cube[4], cube[5], cube[6], cube[7]);
+	device->insertSquare(cube[0], cube[4], cube[5], cube[1]);
+	device->insertSquare(cube[1], cube[5], cube[6], cube[2]);
+	device->insertSquare(cube[2], cube[6], cube[7], cube[3]);
+	device->insertSquare(cube[3], cube[7], cube[4], cube[0]);
 	device->setBackgroundColor(0xFFFFFF);
 	mwindow.SetDisplayFunc(DrawFunc);
 	mwindow.SetReSize(reSizeScreen);
@@ -48,18 +48,18 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 
 void DrawFunc() {
 	if (mwindow.GetKey(VK_LEFT)) {
-		alpha += 0.05f;
+		alpha += 0.1f;
 	} else {
 		if (mwindow.GetKey(VK_RIGHT)) {
-			alpha -= 0.05f;
+			alpha -= 0.1f;
 		}
 	}
 	if (mwindow.GetKey(VK_SPACE)) {
 		//device->deleteObject(cubeNo);
 	}
-	device->setLookAt(pos, pos, pos, 0, 0, 0, 0, 0,-1);
+	device->setLookAt(pos, 0, 0, 0, 0, 0, 0, 0,1);
 	matrix_c world;
-	world.set_rotate(0, 0, 1, alpha);
+	world.set_rotate(-1, -0.5, 1, alpha);
 	device->setWorld(world);
 	device->drawFrames();
 }
