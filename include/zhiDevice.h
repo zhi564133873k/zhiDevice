@@ -207,13 +207,13 @@ private:
 		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
-			for (int i = top; i < bottom, i < height; ++i) {
+			for (int i = top; i < bottom&&i < height; ++i) {
 				if (i >= 0) {
 					trap.trapezoid_edge_interp((float)i + 0.5f);
 					scanline_c scanline(trap, i);
 					draw_scanline(scanline);
 				}
-			}		
+			}
 		}
 	}
 
@@ -242,9 +242,6 @@ private:
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
 				//float zbu = zbuffer[scanline.y][x];
-				if (scanline.y<=100) {
-					int m = 1;
-				}
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
 					zbuffer[scanline.y][x] = scanline.v.rhw;

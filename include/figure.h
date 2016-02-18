@@ -131,20 +131,20 @@ std::vector<trapezoid> getTrap(vertex p1, vertex p2, vertex p3) {
 	if (p1.point.y < p3.point.y) { std::swap(p1, p3); }
 	if (p2.point.y < p3.point.y) { std::swap(p2, p3); }
 	if ((p1.point.y != p2.point.y || p1.point.y != p3.point.y) && (p1.point.x != p2.point.x || p1.point.x != p3.point.x)) {
-		if (p2.point.y == p3.point.y) {//平底		
+		if (p2.point.y == p3.point.y) {//平顶		
 			if (p3.point.x > p2.point.x)
 				std::swap(p3, p2);
-			trapezoid trap(p3.point.y, p1.point.y, p3, p1, p2, p3);
+			trapezoid trap(p3.point.y, p1.point.y, p3, p1, p2, p1);
 			if (trap.top < trap.bottom)
 				trap_vect.push_back(trap);
-		} else if (p2.point.y == p1.point.y) {//平顶
+		} else if (p2.point.y == p1.point.y) {//平底
 			if (p2.point.x > p1.point.x)
 				std::swap(p1, p2);
 			trapezoid trap(p3.point.y, p1.point.y, p3, p2, p3, p1);
 			if (trap.top < trap.bottom)
 				trap_vect.push_back(trap);
 		} else {
-			float xl = p1.point.x + (p2.point.x - p3.point.x) * (p1.point.y - p3.point.y) / (p2.point.y - p3.point.y);
+			float xl = p3.point.x + (p2.point.x - p3.point.x) * (p1.point.y - p3.point.y) / (p2.point.y - p3.point.y);
 			if (xl <= p1.point.x) {		// triangle left
 				trapezoid trap1(p3.point.y, p2.point.y, p3, p2, p3, p1);
 				trapezoid trap2(p2.point.y, p1.point.y, p2, p1, p3, p1);	

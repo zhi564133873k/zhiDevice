@@ -8,7 +8,7 @@ void reSizeScreen();
 void forward();
 void backward();
 float pos = 3.5;
-float alpha = 1;
+float alpha = 0;
 int cubeNo;
 vertex cube[8] = {
 	vertex(1,-1,1, 1.0, 0.2, 0.2),
@@ -59,7 +59,7 @@ void DrawFunc() {
 	}
 	device->setLookAt(pos, 0, 0, 0, 0, 0, 0, 0,1);
 	matrix_c world;
-	world.set_rotate(-1, -0.5, 1, alpha);
+	world.set_rotate(1, 1, 0, alpha);
 	device->setWorld(world);
 	device->drawFrames();
 }
