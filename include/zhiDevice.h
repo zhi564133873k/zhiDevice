@@ -10,6 +10,7 @@ const unsigned int defaultColor = 0x000000;
 class camera {
 public:
 	matrix_c tranMatrix;
+	vector_c viewPoint;
 
 	camera(int, int);
 	void update();
@@ -18,8 +19,8 @@ public:
 	void setWidth(int);
 	void setHeight(int);
 	void setAspect(int, int);
-	void setWorld(matrix_c);
-
+	void setWorld(matrix_c&);
+	matrix_c getworld();
 private:
 	matrix_c world;
 	matrix_c view;
@@ -53,7 +54,9 @@ public:
 		drawBackGround();
 		for (auto obj : objects) {
 			for (auto ite : obj.second) {
-				drawplane(projection(ite.p1), projection(ite.p2), projection(ite.p3));
+				vertex p1 = ite.p1, p2 = ite.p2, p3 = ite.p3;
+				if (!pretreatment(p1, p2, p3)) { continue; }
+				drawplane(p1, p2, p3);
 				//drawWire(projection(ite.p1.point), projection(ite.p2.point), projection(ite.p3.point));
 			}
 		}
@@ -161,6 +164,14 @@ public:
 		return objectNo;
 	}
 
+	void setCullBack(bool Bool) {
+		cullBack = Bool;
+	}
+
+	void setCVVCheck(bool Bool) {
+		checkcvv = Bool;
+	}
+
 	void setWidth(int width) {
 		zhiDevice::width = width;
 		camera.setWidth(width);
@@ -191,6 +202,9 @@ private:
 	unsigned int backgroundColor = 0x000000;
 	std::map<int, std::vector<Triangle>> objects;
 
+	bool cullBack = false;
+	bool checkcvv = false;
+
 	void drawBackGround() {
 		for (int j = 0; j < height; ++j) {
 			for (int i = 0; i < width; ++i) {
@@ -203,7 +217,7 @@ private:
 		}
 	}
 
-	void drawplane(vertex v1, vertex v2, vertex v3) {
+	void drawplane(vertex& v1, vertex& v2, vertex& v3) {
 		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
@@ -223,17 +237,25 @@ private:
 			drawLine(v3.x, v3.y, v1.x, v1.y, 0x000000);
 	}
 
-	vertex projection(vertex p) {
-		p.point = p.point*camera.tranMatrix;
-		float w = p.point.w;
-		p.point=homogenize(p.point);
-		p.point.w = w;
-		p.rhw_init();
-		return p;
+	bool pretreatment(const vertex& p1, const vertex& p2, const vertex& p3) {
+		if (cullBack) {
+			if (isBack(p1.point*camera.getworld(), p2.point*camera.getworld(), p3.point*camera.getworld())) { return false; }
+		}
+		bool r1 = projection(p1), r2 = projection(p2), r3 = projection(p3);
+		return r1||r2||r3 ? true : false;
 	}
 
-	vector_c projection(vector_c p) {
-		return homogenize(p*camera.tranMatrix);
+	bool projection(const vertex& p) {
+		vector_c point = p.point*camera.tranMatrix;
+		float w = point.w;
+		p.point = homogenize(point);
+		p.point.w = w;
+		p.rhw_init();
+		if (checkcvv) {//¿ÉÓÅ»¯
+			if (point.x>point.w|| point.x<-point.w || point.y>point.w || point.y<-point.w || point.z>point.w || point.z<0.0f) {
+				return false;
+			}
+		}			
 	}
 
 	void draw_scanline(const scanline_c& scanline) {
@@ -347,7 +369,6 @@ private:
 		vector.y = (1.0f - p.y * rhw) * height * 0.5f;
 		vector.z = p.z * rhw;
 		vector.w = 1.0f;
-		//vector.w = p.w;
 		return vector;
 	}
 
@@ -458,6 +479,13 @@ private:
 		framebuffer[y][x] = color;
 		//}			
 	}
+
+	bool isBack(const vector_c & v1, const vector_c & v2, const vector_c & v3) {
+		vector_c sightLine = v2 - camera.viewPoint;
+		vector_c l1 = v2 - v1;
+		vector_c l2 = v3 - v2;
+		return sightLine.dotproduct(l1*l2)>0 ? true : false;
+	}
 };
 
 camera::camera(int width, int height) {
@@ -489,6 +517,7 @@ void camera::set_perspective() {
 }
 
 void camera::lookat(const vector_c & eye, const vector_c & at, const vector_c & up) {
+	viewPoint = eye;
 	vector_c xaxis, yaxis, zaxis;
 
 	zaxis = at - eye;
@@ -537,7 +566,11 @@ void camera::setAspect(int width, int height) {
 	set_perspective();
 }
 
-void camera::setWorld(matrix_c world) {
+void camera::setWorld(matrix_c& world) {
 	camera::world = world;
 	update();
+}
+
+matrix_c camera::getworld() {
+	return world;
 }

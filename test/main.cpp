@@ -7,7 +7,7 @@ void DrawFunc();
 void reSizeScreen();
 void forward();
 void backward();
-float pos = 3.5;
+float pos = 3;
 float alpha = 0;
 int cubeNo;
 vertex cube[8] = {
@@ -30,13 +30,15 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 
 	device=new zhiDevice(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
 	cubeNo = device->newObject();
-	device->insertSquare(cube[0], cube[1], cube[2], cube[3]);
+	device->insertSquare(cube[0], cube[3], cube[2], cube[1]);
 	device->insertSquare(cube[4], cube[5], cube[6], cube[7]);
-	device->insertSquare(cube[0], cube[4], cube[5], cube[1]);
-	device->insertSquare(cube[1], cube[5], cube[6], cube[2]);
-	device->insertSquare(cube[2], cube[6], cube[7], cube[3]);
-	device->insertSquare(cube[3], cube[7], cube[4], cube[0]);
+	device->insertSquare(cube[0], cube[1], cube[5], cube[4]);
+	device->insertSquare(cube[1], cube[2], cube[6], cube[5]);
+	device->insertSquare(cube[2], cube[3], cube[7], cube[6]);
+	device->insertSquare(cube[3], cube[0], cube[4], cube[7]);
 	device->setBackgroundColor(0xFFFFFF);
+	device->setCullBack(true);
+	//device->setCVVCheck(true);
 	mwindow.SetDisplayFunc(DrawFunc);
 	mwindow.SetReSize(reSizeScreen);
 	mwindow.SetKeyFunction(VK_UP, forward);
@@ -57,9 +59,9 @@ void DrawFunc() {
 	if (mwindow.GetKey(VK_SPACE)) {
 		//device->deleteObject(cubeNo);
 	}
-	device->setLookAt(pos, 0, 0, 0, 0, 0, 0, 0,1);
+	device->setLookAt(pos, pos, pos, 0, 0, 0, 0, 1,0);
 	matrix_c world;
-	world.set_rotate(1, 1, 0, alpha);
+	world.set_rotate(0, 1, 0, alpha);
 	device->setWorld(world);
 	device->drawFrames();
 }

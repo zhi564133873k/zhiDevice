@@ -35,7 +35,7 @@ public:
 	void operator += (const vertex&) const;
 
 
-	void rhw_init() {
+	void rhw_init() const{
 		float rhw = 1.0f / point.w;
 		vertex::rhw = rhw;
 		tc.u *= rhw;
