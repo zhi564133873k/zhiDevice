@@ -6,6 +6,7 @@
 #include"figure.h"
 
 const unsigned int defaultColor = 0x000000;
+enum render_state { WireFrame, Color, Texture };
 
 class camera {
 public:
@@ -31,6 +32,21 @@ private:
 	void set_perspective();
 };
 
+class object {
+public:
+	std::vector<Triangle> triangle;
+	render_state state= WireFrame;
+
+	object() {};
+
+	void insertTriangle(const vertex& p1,const vertex& p2,const vertex& p3) {
+		triangle.emplace_back(p1, p2, p3);
+	};
+	void insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
+		triangle.emplace_back(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+	};
+};
+
 class zhiDevice {
 public:
 	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height), camera(width,height){
@@ -52,12 +68,24 @@ public:
 			return;
 		}
 		drawBackGround();
-		for (auto obj : objects) {
-			for (auto ite : obj.second) {
+		for (auto object : objects) {
+			auto obj = object.second;
+			for (auto ite : obj.triangle) {
 				vertex p1 = ite.p1, p2 = ite.p2, p3 = ite.p3;
 				if (!pretreatment(p1, p2, p3)) { continue; }
-				drawplane(p1, p2, p3);
-				//drawWire(projection(ite.p1.point), projection(ite.p2.point), projection(ite.p3.point));
+				switch (obj.state) {
+				case WireFrame:
+					drawWire(p1.point, p2.point, p3.point);
+					break;
+				case Color:
+					drawPlane(p1, p2, p3);
+					break;
+				case Texture:
+
+					break;
+				default:
+					break;
+				}
 			}
 		}
 	}
@@ -103,7 +131,9 @@ public:
 		} else {
 			objectNo = No;
 			++MaxObjectNo;
+			objects[No];
 		}
+
 		return No;
 	}
 
@@ -123,7 +153,6 @@ public:
 		}
 	}
 
-
 	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4) {
 		insertTriangle(p1, p2, p3);
 		insertTriangle(p3, p4, p1);
@@ -142,10 +171,10 @@ public:
 
 	int insertTriangle(vertex p1, vertex p2, vertex p3) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].emplace_back(p1, p2, p3);
+			objects[objectNo].insertTriangle(p1, p2, p3);
 		} else {
 			newObject();
-			objects[objectNo].emplace_back(p1, p2, p3);
+			objects[objectNo].insertTriangle(p1, p2, p3);
 		}
 		return objectNo;
 	}
@@ -156,12 +185,20 @@ public:
 
 	int insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].emplace_back(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+			objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		} else {
 			newObject();
-			objects[objectNo].emplace_back(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+			objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		}
 		return objectNo;
+	}
+
+	void setRenderState(int No,render_state state) {
+		objects[No].state = state;
+	}
+
+	void setRenderState(render_state state) {
+		objects[objectNo].state = state;
 	}
 
 	void setCullBack(bool Bool) {
@@ -200,7 +237,7 @@ private:
 	unsigned int objectNo=0;
 	unsigned int MaxObjectNo = 0;
 	unsigned int backgroundColor = 0x000000;
-	std::map<int, std::vector<Triangle>> objects;
+	std::map<int, object> objects;
 
 	bool cullBack = false;
 	bool checkcvv = false;
@@ -217,7 +254,11 @@ private:
 		}
 	}
 
-	void drawplane(vertex& v1, vertex& v2, vertex& v3) {
+	void drawTexture(vertex& v1, vertex& v2, vertex& v3) {
+	
+	}
+
+	void drawPlane(vertex& v1, vertex& v2, vertex& v3) {
 		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
