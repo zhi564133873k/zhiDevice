@@ -81,7 +81,7 @@ public:
 					drawPlane(p1, p2, p3);
 					break;
 				case Texture:
-
+					drawTexture(p1, p2, p3, ite.texture);
 					break;
 				default:
 					break;
@@ -254,8 +254,18 @@ private:
 		}
 	}
 
-	void drawTexture(vertex& v1, vertex& v2, vertex& v3) {
-	
+	void drawTexture(vertex& v1, vertex& v2, vertex& v3, unsigned int **texture) {
+		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
+		for (auto trap : trap_vect) {
+			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
+			for (int i = top; i < bottom&&i < height; ++i) {
+				if (i >= 0) {
+					trap.trapezoid_edge_interp((float)i + 0.5f);
+					scanline_c scanline(trap, i);
+					draw_scanline(scanline, texture);
+				}
+			}
+		}
 	}
 
 	void drawPlane(vertex& v1, vertex& v2, vertex& v3) {
@@ -300,38 +310,46 @@ private:
 	}
 
 	void draw_scanline(const scanline_c& scanline) {
-		//unsigned int *framebuffer = zhiDevice::framebuffer[scanline.y];
-		//float *zbuffer = zhiDevice::zbuffer[scanline.y];
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
-				//float zbu = zbuffer[scanline.y][x];
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
 					zbuffer[scanline.y][x] = scanline.v.rhw;
-					//if (render_state & RENDER_STATE_COLOR) {
-						float r = scanline.v.color.r * w;
-						float g = scanline.v.color.g * w;
-						float b = scanline.v.color.b * w;
-						int R = (int)(r * 255.0f);
-						int G = (int)(g * 255.0f);
-						int B = (int)(b * 255.0f);
-						R = CMID(R, 0, 255);
-						G = CMID(G, 0, 255);
-						B = CMID(B, 0, 255);
-						//framebuffer[x] = (R << 16) | (G << 8) | (B);
-						drawPixel(x, scanline.y, (R << 16) | (G << 8) | (B));
-					//}
-					//if (render_state & RENDER_STATE_TEXTURE) {
-					//	float u = scanline->v.tc.u * w;
-					//	float v = scanline->v.tc.v * w;
-					//	IUINT32 cc = device_texture_read(device, u, v);
-					//	framebuffer[x] = cc;
-					//}
+					float r = scanline.v.color.r * w;
+					float g = scanline.v.color.g * w;
+					float b = scanline.v.color.b * w;
+					int R = (int)(r * 255.0f);
+					int G = (int)(g * 255.0f);
+					int B = (int)(b * 255.0f);
+					R = CMID(R, 0, 255);
+					G = CMID(G, 0, 255);
+					B = CMID(B, 0, 255);
+					drawPixel(x, scanline.y, (R << 16) | (G << 8) | (B));
 				}
 			}
 			scanline.v += scanline.step;
 			if (x >= width) break;
 		}
+	}
+
+	void draw_scanline(const scanline_c& scanline,unsigned int **texture) {
+		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
+			if (x >= 0 && x < width) {
+				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
+					float w = 1.0f / scanline.v.rhw;
+					zbuffer[scanline.y][x] = scanline.v.rhw;
+					drawPixel(x, scanline.y, texture_read(texture, scanline.v.tc.u * w, scanline.v.tc.v * w));
+				}
+			}
+			scanline.v += scanline.step;
+			if (x >= width) break;
+		}
+	}
+
+	unsigned int texture_read(unsigned int **texture, float u, float v) {
+		/*
+		*MARK
+		*/
 	}
 
 	//void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {
