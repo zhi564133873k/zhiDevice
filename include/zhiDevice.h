@@ -39,11 +39,35 @@ public:
 
 	object() {};
 
-	void insertTriangle(const vertex& p1,const vertex& p2,const vertex& p3) {
+	int insertTriangle(const vertex& p1, const vertex& p2, const vertex& p3) {
 		triangle.emplace_back(p1, p2, p3);
+		return triangle.size() - 1;
 	};
-	void insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
+	int insertTriangle(const vertex& p1,const vertex& p2,const vertex& p3, unsigned int texture) {
+		triangle.emplace_back(p1, p2, p3, texture);
+		return triangle.size() - 1;
+	};
+	int insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
 		triangle.emplace_back(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+		return triangle.size() - 1;
+	};
+};
+
+class texture {
+public:
+	unsigned int **ptr=nullptr;
+	int width;         
+	int height;            
+	float max_u;                
+	float max_v;
+	texture() {};
+	texture(void *bits, int width, int height, float u, float v) :width(width), height(height), max_u(u), max_v(v) {
+		char *bit = (char*)bits;
+		ptr = (unsigned int **)malloc(sizeof(unsigned int*) * height);
+		for (int j = 0; j < height; ++j) {
+			ptr[j] = (unsigned int *)(bit);
+			bit += sizeof(unsigned int) * width;
+		}
 	};
 };
 
@@ -81,7 +105,7 @@ public:
 					drawPlane(p1, p2, p3);
 					break;
 				case Texture:
-					drawTexture(p1, p2, p3, ite.texture);
+					drawTexture(p1, p2, p3, textures[ite.texture]);
 					break;
 				default:
 					break;
@@ -133,7 +157,6 @@ public:
 			++MaxObjectNo;
 			objects[No];
 		}
-
 		return No;
 	}
 
@@ -143,6 +166,10 @@ public:
 
 	bool ifObjectExist(unsigned int objNo) {
 		return objects.count(objNo);
+	}
+
+	bool ifTextureExist(unsigned int texNo) {
+		return textures.count(texNo);
 	}
 
 	bool activeObject(unsigned int objNo) {
@@ -156,7 +183,13 @@ public:
 	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4) {
 		insertTriangle(p1, p2, p3);
 		insertTriangle(p3, p4, p1);
-		return objectNo;
+		return triangleNo;
+	}
+
+	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4,unsigned int texture) {
+		insertTriangle(p1, p2, p3, texture);
+		insertTriangle(p3, p4, p1, texture);
+		return triangleNo;
 	}
 
 	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
@@ -166,17 +199,27 @@ public:
 	int insertSquare(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3, float x4, float y4, float z4, unsigned int color4) {
 		insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		insertTriangle(x3, y3, z3, color3, x4, y4, z4, color4, x1, y1, z1, color1);
-		return objectNo;
+		return triangleNo;
 	}
 
 	int insertTriangle(vertex p1, vertex p2, vertex p3) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].insertTriangle(p1, p2, p3);
+			triangleNo = objects[objectNo].insertTriangle(p1, p2, p3);
 		} else {
 			newObject();
-			objects[objectNo].insertTriangle(p1, p2, p3);
+			triangleNo = objects[objectNo].insertTriangle(p1, p2, p3);
 		}
-		return objectNo;
+		return triangleNo;
+	}
+
+	int insertTriangle(vertex p1, vertex p2, vertex p3, unsigned int texture) {
+		if (ifObjectExist(objectNo)) {
+			triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+		} else {
+			newObject();
+			triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+		}
+		return triangleNo;
 	}
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
@@ -185,12 +228,32 @@ public:
 
 	int insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
 		if (ifObjectExist(objectNo)) {
-			objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+			triangleNo = objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		} else {
 			newObject();
-			objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
+			triangleNo = objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		}
-		return objectNo;
+		return triangleNo;
+	}
+
+	unsigned int createTexture(void *bits, int width, int height) {
+		int No = MaxTextureNo;
+		if (ifTextureExist(No)) {
+			No = -1;
+		} else {
+			textureNo = No;
+			++MaxTextureNo;
+			textures.insert({ No,texture(bits,width,height,(width - 1),(height - 1)) });
+		}
+		return No;
+	}
+
+	void setTexture(int triNo,int texNo) {
+		objects[objectNo].triangle[triNo].texture = texNo;
+	}
+
+	void setTexture(int texNo) {
+		setTexture(triangleNo, texNo);
 	}
 
 	void setRenderState(int No,render_state state) {
@@ -236,8 +299,12 @@ private:
 	camera camera;
 	unsigned int objectNo=0;
 	unsigned int MaxObjectNo = 0;
+	unsigned int triangleNo = 0;
+	unsigned int textureNo = 0;
+	unsigned int MaxTextureNo = 0;
 	unsigned int backgroundColor = 0x000000;
 	std::map<int, object> objects;
+	std::map<int, texture> textures;
 
 	bool cullBack = false;
 	bool checkcvv = false;
@@ -254,7 +321,7 @@ private:
 		}
 	}
 
-	void drawTexture(vertex& v1, vertex& v2, vertex& v3, unsigned int **texture) {
+	void drawTexture(vertex& v1, vertex& v2, vertex& v3, texture texture) {
 		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
@@ -332,7 +399,7 @@ private:
 		}
 	}
 
-	void draw_scanline(const scanline_c& scanline,unsigned int **texture) {
+	void draw_scanline(const scanline_c& scanline, texture texture) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
@@ -346,10 +413,12 @@ private:
 		}
 	}
 
-	unsigned int texture_read(unsigned int **texture, float u, float v) {
-		/*
-		*MARK
-		*/
+	unsigned int texture_read(texture texture, float u, float v) {
+		u = u * texture.max_u;
+		v = v * texture.max_v;
+		int x = CMID((int)(u + 0.5f), 0, texture.width - 1);
+		int y = CMID((int)(v + 0.5f), 0, texture.height - 1);
+		return texture.ptr[y][x];
 	}
 
 	//void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {

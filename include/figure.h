@@ -29,6 +29,12 @@ public:
 		color.g = g;
 		color.b = b;
 	};
+	vertex(float x, float y, float z, float u, float v) :point(x, y, z), tc({ u,v }) {};
+	vertex(float x, float y, float z, float u, float v, float r, float g, float b) :point(x, y, z), tc({ u,v }) {
+		color.r = r;
+		color.g = g;
+		color.b = b;
+	};
 	vertex(vector_c v):point(v) {};
 	vertex() {};
 	//vertex(const vertex& v):point(v.point),tc(v.tc),color(v.color),rhw(rhw) {};
@@ -66,8 +72,10 @@ public:
 	vertex p1;
 	vertex p2;
 	vertex p3;
+	unsigned int texture;
 	Triangle(float x1, float y1, float z1,unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) :p1(vertex(x1, y1, z1)), p2(vertex(x2, y2, z2)), p3(vertex(x3, y3, z3)) {};
 	Triangle(vertex p1, vertex p2, vertex p3) :p1(p1), p2(p2), p3(p3) {};
+	Triangle(vertex p1, vertex p2, vertex p3, unsigned int texture) :p1(p1), p2(p2), p3(p3), texture(texture) {};
 	Triangle() {};
 };
 
