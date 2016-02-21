@@ -181,14 +181,15 @@ public:
 	}
 
 	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4) {
-		insertTriangle(p1, p2, p3);
-		insertTriangle(p3, p4, p1);
-		return triangleNo;
+		return insertSquare(p1, p2, p3, p4, 0);
 	}
 
 	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4,unsigned int texture) {
-		insertTriangle(p1, p2, p3, texture);
-		insertTriangle(p3, p4, p1, texture);
+		vertex t1 = p1, t2 = p2, t3 = p3, t4 = p4;
+		t1.tc.u = 0, t1.tc.v = 0, t2.tc.u = 0, t2.tc.v = 1;
+		t3.tc.u = 1, t3.tc.v = 1, t4.tc.u = 1, t4.tc.v = 0;
+		insertTriangle(t1, t2, t3, texture);
+		insertTriangle(t3, t4, t1, texture);
 		return triangleNo;
 	}
 
