@@ -1,6 +1,6 @@
 #include"zhiDevice.h"
 #include"mWindow.h"
-
+#include"LoadTexture.h"
 zhiDevice *device=nullptr;
 mWindow & mwindow = mWindow::Instance();
 unsigned int textureNo=0;
@@ -8,18 +8,18 @@ void DrawFunc();
 void reSizeScreen();
 void forward();
 void backward();
-float pos = 3;
+float pos = 2;
 float alpha = 0;
 int cubeNo;
 vertex cube[8] = {
-	vertex(1 ,-1, 1, 0,0, 1.0, 0.2, 0.2),
-	vertex(-1,-1, 1, 0,1, 0.2, 1.0, 0.2),
-	vertex(-1, 1, 1, 1,1, 0.2, 0.2, 1.0),
-	vertex(1 , 1, 1, 1,0, 1.0, 0.2, 1.0),
-	vertex(1 ,-1,-1, 0,0, 1.0, 1.0, 0.2),
-	vertex(-1,-1,-1, 0,1, 0.2, 1.0, 1.0),
-	vertex(-1, 1,-1, 1,1, 1.0, 0.3, 0.3),
-	vertex(1 , 1,-1, 1,0, 0.2, 1.0, 0.3)
+	vertex(1 ,-1, 1, 1.0, 0.2, 0.2),
+	vertex(-1,-1, 1, 0.2, 1.0, 0.2),
+	vertex(-1, 1, 1, 0.2, 0.2, 1.0),
+	vertex(1 , 1, 1, 1.0, 0.2, 1.0),
+	vertex(1 ,-1,-1, 1.0, 1.0, 0.2),
+	vertex(-1,-1,-1, 0.2, 1.0, 1.0),
+	vertex(-1, 1,-1, 1.0, 0.3, 0.3),
+	vertex(1 , 1,-1, 0.2, 1.0, 0.3)
 };
 
 void init_texture() {
@@ -31,8 +31,25 @@ void init_texture() {
 			texture[j][i] = ((x + y) & 1) ? 0xffffff : 0x3fbcef;
 		}
 	}
-	textureNo=device->createTexture(texture, 256, 256);
+	textureNo=device->createTexture(texture,sizeof(unsigned int), 256, 256);
 };
+
+void insertModel(vertex& p1, vertex& p2, vertex& p3, vertex& p4, unsigned int textureNo) {
+	vertex t1 = p1, t2 = p2, t3 = p3, t4 = p4;
+	t1.tc.u = 0, t1.tc.v = 0, t2.tc.u = 0, t2.tc.v = 1;
+	t3.tc.u = 1, t3.tc.v = 1, t4.tc.u = 1, t4.tc.v = 0;
+	device->insertSquare(t1, t2, t3, t4, textureNo);
+}
+
+void initObject() {
+	cubeNo = device->newObject();
+	insertModel(cube[0], cube[3], cube[2], cube[1], textureNo);
+	insertModel(cube[4], cube[5], cube[6], cube[7], textureNo);
+	insertModel(cube[0], cube[1], cube[5], cube[4], textureNo);
+	insertModel(cube[1], cube[2], cube[6], cube[5], textureNo);
+	insertModel(cube[2], cube[3], cube[7], cube[6], textureNo);
+	insertModel(cube[3], cube[0], cube[4], cube[7], textureNo);
+}
 
 int WINAPI WinMain(HINSTANCE	hInstance,
 	HINSTANCE	hPrevInstance,
@@ -42,24 +59,20 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 	mwindow.Create3DWindow();
 
 	device=new zhiDevice(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
-	init_texture();
-	cubeNo = device->newObject();
-	device->insertSquare(cube[0], cube[3], cube[2], cube[1], textureNo);
-	device->insertSquare(cube[4], cube[5], cube[6], cube[7], textureNo);
-	device->insertSquare(cube[0], cube[1], cube[5], cube[4], textureNo);
-	device->insertSquare(cube[1], cube[2], cube[6], cube[5], textureNo);
-	device->insertSquare(cube[2], cube[3], cube[7], cube[6], textureNo);
-	device->insertSquare(cube[3], cube[0], cube[4], cube[7], textureNo);
+	textureNo = LoadTexture(L"1.BMP", *device);
+	if (textureNo == -1) {
+		init_texture();
+	}
+	initObject();	
 	device->setBackgroundColor(0xFFFFFF);
 	device->setRenderState(cubeNo, Texture);
 	device->setCullBack(true);
 	//device->setCVVCheck(true);
 	mwindow.SetDisplayFunc(DrawFunc);
 	mwindow.SetReSize(reSizeScreen);
-	mwindow.SetKeyFunction(VK_UP, forward);
-	mwindow.SetKeyFunction(VK_DOWN, backward);
+	mwindow.SetKeyDownEvent(VK_UP, forward);
+	mwindow.SetKeyDownEvent(VK_DOWN, backward);
 	WindowsLoop();
-
 	return 0;							// ÍË³ö³ÌÐò
 }
 

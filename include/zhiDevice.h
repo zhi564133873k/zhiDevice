@@ -2,6 +2,7 @@
 #include<vector>
 #include<utility>
 #include<map>
+#include<memory>
 #include"zhi_matrix.h"
 #include"figure.h"
 
@@ -55,20 +56,32 @@ public:
 
 class texture {
 public:
-	unsigned int **ptr=nullptr;
+	unsigned int **bitmap = nullptr;
 	int width;         
 	int height;            
 	float max_u;                
 	float max_v;
 	texture() {};
-	texture(void *bits, int width, int height, float u, float v) :width(width), height(height), max_u(u), max_v(v) {
+	texture(void *bits, long sizeofPixel, int width, int height, float u, float v) :width(width), height(height), max_u(u), max_v(v) {
 		char *bit = (char*)bits;
-		ptr = (unsigned int **)malloc(sizeof(unsigned int*) * height);
+		int head = sizeof(unsigned int*) * height, row = width * sizeof(unsigned int);
+		ptr = (char *)malloc(head + row * height);
+		bitmap = (unsigned int **)ptr;
 		for (int j = 0; j < height; ++j) {
-			ptr[j] = (unsigned int *)(bit);
-			bit += sizeof(unsigned int) * width;
+			bitmap[j] = (unsigned int *)(ptr + head + row * j);
+			for (int i = 0; i < width; ++i, bit += sizeofPixel) {
+				unsigned int value = (*(unsigned int *)bit);
+				bitmap[j][i] = value;
+			}
 		}
 	};
+	~texture() {
+		if (ptr!=nullptr) {
+			free(ptr);
+		}
+	};
+private:
+	char *ptr = nullptr;
 };
 
 class zhiDevice {
@@ -105,7 +118,7 @@ public:
 					drawPlane(p1, p2, p3);
 					break;
 				case Texture:
-					drawTexture(p1, p2, p3, textures[ite.texture]);
+					drawTexture(p1, p2, p3, *textures[ite.texture]);
 					break;
 				default:
 					break;
@@ -185,12 +198,11 @@ public:
 	}
 
 	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4,unsigned int texture) {
-		vertex t1 = p1, t2 = p2, t3 = p3, t4 = p4;
-		t1.tc.u = 0, t1.tc.v = 0, t2.tc.u = 0, t2.tc.v = 1;
-		t3.tc.u = 1, t3.tc.v = 1, t4.tc.u = 1, t4.tc.v = 0;
-		insertTriangle(t1, t2, t3, texture);
-		insertTriangle(t3, t4, t1, texture);
-		return triangleNo;
+		if (insertTriangle(p1, p2, p3, texture) != -1 && insertTriangle(p3, p4, p1, texture) != -1) {
+			return triangleNo;
+		} else {
+			return -1;
+		}
 	}
 
 	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
@@ -214,13 +226,17 @@ public:
 	}
 
 	int insertTriangle(vertex p1, vertex p2, vertex p3, unsigned int texture) {
-		if (ifObjectExist(objectNo)) {
-			triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+		if (ifTextureExist(texture)) {
+			if (ifObjectExist(objectNo)) {
+				triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+			} else {
+				newObject();
+				triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+			}
+			return triangleNo;
 		} else {
-			newObject();
-			triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+			return -1;
 		}
-		return triangleNo;
 	}
 
 	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
@@ -237,14 +253,14 @@ public:
 		return triangleNo;
 	}
 
-	unsigned int createTexture(void *bits, int width, int height) {
+	unsigned int createTexture(void *bits ,long sizeofPixel, int width, int height) {
 		int No = MaxTextureNo;
 		if (ifTextureExist(No)) {
 			No = -1;
 		} else {
 			textureNo = No;
 			++MaxTextureNo;
-			textures.insert({ No,texture(bits,width,height,(width - 1),(height - 1)) });
+			textures[No] = std::make_shared<texture>(bits, sizeofPixel, width, height, (width - 1), (height - 1));
 		}
 		return No;
 	}
@@ -305,7 +321,7 @@ private:
 	unsigned int MaxTextureNo = 0;
 	unsigned int backgroundColor = 0x000000;
 	std::map<int, object> objects;
-	std::map<int, texture> textures;
+	std::map<int, std::shared_ptr<texture>> textures;
 
 	bool cullBack = false;
 	bool checkcvv = false;
@@ -322,7 +338,7 @@ private:
 		}
 	}
 
-	void drawTexture(vertex& v1, vertex& v2, vertex& v3, texture texture) {
+	void drawTexture(vertex& v1, vertex& v2, vertex& v3, texture& texture) {
 		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
@@ -400,7 +416,7 @@ private:
 		}
 	}
 
-	void draw_scanline(const scanline_c& scanline, texture texture) {
+	void draw_scanline(const scanline_c& scanline, texture& texture) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
@@ -414,12 +430,12 @@ private:
 		}
 	}
 
-	unsigned int texture_read(texture texture, float u, float v) {
+	unsigned int texture_read(texture& texture, float u, float v) {
 		u = u * texture.max_u;
 		v = v * texture.max_v;
 		int x = CMID((int)(u + 0.5f), 0, texture.width - 1);
 		int y = CMID((int)(v + 0.5f), 0, texture.height - 1);
-		return texture.ptr[y][x];
+		return texture.bitmap[y][x];
 	}
 
 	//void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {
