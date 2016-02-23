@@ -75,11 +75,21 @@ public:
 			}
 		}
 	};
+
 	~texture() {
 		if (ptr!=nullptr) {
 			free(ptr);
 		}
 	};
+
+	unsigned int readTexture(float u, float v) {
+		u = u * max_u;
+		v = v * max_v;
+		int x = CMID((int)(u + 0.5f), 0, width - 1);
+		int y = CMID((int)(v + 0.5f), 0, height - 1);
+		return bitmap[y][x];
+	}
+
 private:
 	char *ptr = nullptr;
 };
@@ -303,7 +313,7 @@ public:
 		zhiDevice::framebuffer = framebuffer;
 	}
 
-	void setBackgroundColor(unsigned int color) {
+	void setBGColor(unsigned int color) {
 		backgroundColor = color;
 	}
 
@@ -327,15 +337,15 @@ private:
 	bool checkcvv = false;
 
 	void drawBackGround() {
-		for (int j = 0; j < height; ++j) {
-			for (int i = 0; i < width; ++i) {
-				drawPixel(i, j, backgroundColor);
-				if (zbuffer[j][i]==0) {
-					int k = 1;
+			for (int j = 0; j < height; ++j) {
+				for (int i = 0; i < width; ++i) {
+					drawPixel(i, j, backgroundColor);
+					if (zbuffer[j][i] == 0) {
+						int k = 1;
+					}
+					zbuffer[j][i] = 0;
 				}
-				zbuffer[j][i] = 0;
 			}
-		}
 	}
 
 	void drawTexture(vertex& v1, vertex& v2, vertex& v3, texture& texture) {
@@ -422,20 +432,12 @@ private:
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
 					zbuffer[scanline.y][x] = scanline.v.rhw;
-					drawPixel(x, scanline.y, texture_read(texture, scanline.v.tc.u * w, scanline.v.tc.v * w));
+					drawPixel(x, scanline.y, texture.readTexture(scanline.v.tc.u * w, scanline.v.tc.v * w));
 				}
 			}
 			scanline.v += scanline.step;
 			if (x >= width) break;
 		}
-	}
-
-	unsigned int texture_read(texture& texture, float u, float v) {
-		u = u * texture.max_u;
-		v = v * texture.max_v;
-		int x = CMID((int)(u + 0.5f), 0, texture.width - 1);
-		int y = CMID((int)(v + 0.5f), 0, texture.height - 1);
-		return texture.bitmap[y][x];
 	}
 
 	//void drawHorizLine(int x1, int x2, int y, float zs, float ze, unsigned int color) {
