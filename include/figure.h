@@ -4,37 +4,40 @@
 
 typedef struct { float u, v; } texcoord;//ÌùÍ¼×ø±ê
 
-typedef struct { float r, g, b; } color;
-
 int CMID(int x, int min, int max) { return (x < min) ? min : ((x > max) ? max : x); }
+
+class color {
+public:
+	float r = 0;
+	float g = 0; 
+	float b = 0;
+
+	color() {};
+	color(unsigned int color) {
+		r = color >> 16;
+		g = (color >> 8) - ((int)(r) << 8);
+		b = color - ((int)(r) << 16) - ((int)(g) << 8);
+	};
+	color(float r, float g, float b) :r(r), g(g), b(b) {};
+private:
+	
+};
 
 class trapezoid;
 
 class vertex {
 	friend std::vector<trapezoid> getTrap(vertex, vertex, vertex);
 public:	
-	vector_c point; 
-	texcoord mutable tc;
+	vector_c mutable point;
 	color mutable color;
+	texcoord mutable tc;	
 	float mutable rhw;
 
 	vertex(float x, float y, float z) :point(x, y, z) {};
-	vertex(float x, float y, float z,unsigned int color) :point(x, y, z) {
-		vertex::color.r = color >>16 ;
-		vertex::color.g = (color >> 8) - ((int)(vertex::color.r) << 8);
-		vertex::color.b = color - ((int)(vertex::color.r) << 16) - ((int)(vertex::color.g) << 8);
-	};
-	vertex(float x, float y, float z, float r, float g, float b) :point(x, y, z) {
-		color.r = r;
-		color.g = g;
-		color.b = b;
-	};
+	vertex(float x, float y, float z, unsigned int color) :point(x, y, z),color(color) {};
+	vertex(float x, float y, float z, float r, float g, float b) :point(x, y, z), color(r, g, b) {};
 	vertex(float x, float y, float z, float u, float v) :point(x, y, z), tc({ u,v }) {};
-	vertex(float x, float y, float z, float u, float v, float r, float g, float b) :point(x, y, z), tc({ u,v }) {
-		color.r = r;
-		color.g = g;
-		color.b = b;
-	};
+	vertex(float x, float y, float z, float u, float v, float r, float g, float b) :point(x, y, z), tc({ u,v }), color(r, g, b) {};
 	vertex(vector_c v):point(v) {};
 	vertex() {};
 	//vertex(const vertex& v):point(v.point),tc(v.tc),color(v.color),rhw(rhw) {};
