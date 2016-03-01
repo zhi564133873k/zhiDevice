@@ -9,7 +9,7 @@ int LoadTexture(LPTSTR szFileName ,zhiDevice& device){
 	if (!hBMP)
 		return -1; 
 	GetObject(hBMP, sizeof(BMP), &BMP);
-	textureNo = device.createTexture(BMP.bmBits, (long)(BMP.bmBitsPixel / 8), BMP.bmWidth, BMP.bmHeight);
+	textureNo = device.createMap(BMP.bmBits, (long)(BMP.bmBitsPixel / 8), BMP.bmWidth, BMP.bmHeight);
 	DeleteObject(hBMP); 
 	return textureNo;
 }

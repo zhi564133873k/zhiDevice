@@ -6,19 +6,25 @@ typedef struct { float u, v; } texcoord;//ÌùÍ¼×ø±ê
 
 int CMID(int x, int min, int max) { return (x < min) ? min : ((x > max) ? max : x); }
 
-class color {
+class Color {
 public:
 	float r = 0;
 	float g = 0; 
 	float b = 0;
 
-	color() {};
-	color(unsigned int color) {
+	Color() {};
+	Color(unsigned int color) {
 		r = color >> 16;
 		g = (color >> 8) - ((int)(r) << 8);
 		b = color - ((int)(r) << 16) - ((int)(g) << 8);
 	};
-	color(float r, float g, float b) :r(r), g(g), b(b) {};
+	Color(float r, float g, float b) :r(r), g(g), b(b) {};
+	
+	friend Color  operator * (const Color&, const Color&);
+	friend Color  operator *= (const Color&, float);
+
+	void alphaMix(const Color&, float);
+
 private:
 	
 };
@@ -29,7 +35,7 @@ class vertex {
 	friend std::vector<trapezoid> getTrap(vertex, vertex, vertex);
 public:	
 	vector_c mutable point;
-	color mutable color;
+	Color mutable color;
 	texcoord mutable tc;	
 	float mutable rhw;
 
@@ -75,10 +81,15 @@ public:
 	vertex p1;
 	vertex p2;
 	vertex p3;
-	unsigned int texture;
-	Triangle(float x1, float y1, float z1,unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) :p1(vertex(x1, y1, z1)), p2(vertex(x2, y2, z2)), p3(vertex(x3, y3, z3)) {};
-	Triangle(vertex p1, vertex p2, vertex p3) :p1(p1), p2(p2), p3(p3) {};
-	Triangle(vertex p1, vertex p2, vertex p3, unsigned int texture) :p1(p1), p2(p2), p3(p3), texture(texture) {};
+	vector_c normal;
+	unsigned int mapping;
+	Triangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) :Triangle(vertex(x1, y1, z1), vertex(x2, y2, z2), vertex(x3, y3, z3)) {};
+	Triangle(vertex p1, vertex p2, vertex p3) :Triangle(p1, p2, p3, -1) {};
+	Triangle(vertex p1, vertex p2, vertex p3, unsigned int mapping) :p1(p1), p2(p2), p3(p3), mapping(mapping) {
+		normal = (p2.point - p1.point)*(p3.point - p2.point);
+	};
+	Triangle(vertex p1, vertex p2, vertex p3, unsigned int mapping, float nx, float ny, float nz) :p1(p1), p2(p2), p3(p3), mapping(mapping), normal(nx, ny, nz) {};
+	Triangle(vertex p1, vertex p2, vertex p3, unsigned int mapping, vector_c normal) :p1(p1), p2(p2), p3(p3), mapping(mapping), normal(normal) {};
 	Triangle() {};
 };
 
@@ -122,6 +133,20 @@ public:
 		step.division(trap.left.v, trap.right.v, (trap.right.v.point.x - trap.left.v.point.x));
 	};
 };//É¨ÃèÏß
+
+Color operator*(const Color & c1, const Color & c2) {
+	return Color(c1.r*c2.r, c1.g*c2.g, c1.b*c2.b);
+}
+
+Color operator*=(const Color & c, float alpha) {
+	return Color(c.r*alpha, c.g*alpha, c.b*alpha);
+}
+
+void Color::alphaMix(const Color & c, float alpha) {	
+	r = r*alpha + c.r*(1 - alpha);
+	g = g*alpha + c.g*(1 - alpha);
+	b = b*alpha + c.b*(1 - alpha);
+}
 
 void vertex::operator+=(const vertex & v) const {
 	point.x += v.point.x;

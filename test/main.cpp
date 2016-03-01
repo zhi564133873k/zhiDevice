@@ -31,7 +31,7 @@ void init_texture() {
 			texture[j][i] = ((x + y) & 1) ? 0xffffff : 0x3fbcef;
 		}
 	}
-	textureNo=device->createTexture(texture,sizeof(unsigned int), 256, 256);
+	textureNo=device->createMap(texture,sizeof(unsigned int), 256, 256);
 };
 
 void insertModel(vertex& p1, vertex& p2, vertex& p3, vertex& p4, unsigned int textureNo) {
@@ -57,15 +57,15 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 	int		nCmdShow) {
 
 	mwindow.Create3DWindow();
-
+	mwindow.setFPS(30);
 	device=new zhiDevice(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
 	textureNo = LoadTexture(L"1.BMP", *device);
 	if (textureNo == -1) {
 		init_texture();
 	}
 	initObject();	
-	device->setBackgroundColor(0xFFFFFF);
-	device->setRenderState(cubeNo, Texture);
+	device->setBGColor(0xFFFFFF);
+	device->setRenderState(cubeNo, MAPPING);
 	device->setCullBack(true);
 	//device->setCVVCheck(true);
 	mwindow.SetDisplayFunc(DrawFunc);
@@ -85,13 +85,13 @@ void DrawFunc() {
 		}
 	}
 	if (mwindow.GetKey(VK_SPACE)) {
-		static render_state state = Texture;
-		if (state == Color) {
-			state = Texture;
-		} else if (state == Texture) {
-			state = WireFrame;
-		} else if (state == WireFrame) {
-			state = Color;
+		static render_state state = MAPPING;
+		if (state == COLOR) {
+			state = MAPPING;
+		} else if (state == MAPPING) {
+			state = WIREFRAME;
+		} else if (state == WIREFRAME) {
+			state = COLOR;
 		}
 		device->setRenderState(cubeNo, state);
 	}

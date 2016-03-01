@@ -5,10 +5,14 @@
 #include<memory>
 #include"zhi_matrix.h"
 #include"figure.h"
+#include"light.h"
 
 const unsigned int defaultColor = 0x000000;
-enum render_state { WireFrame, Color, Texture };
-
+enum render_state { WIREFRAME, COLOR, MAPPING };
+/*
+*相机系统，管理变换矩阵
+*
+*/
 class camera {
 public:
 	matrix_c tranMatrix;
@@ -33,10 +37,14 @@ private:
 	void set_perspective();
 };
 
+/*
+*管理物体
+*
+*/
 class object {
 public:
 	std::vector<Triangle> triangle;
-	render_state state= WireFrame;
+	render_state state= WIREFRAME;
 
 	object() {};
 
@@ -44,8 +52,8 @@ public:
 		triangle.emplace_back(p1, p2, p3);
 		return triangle.size() - 1;
 	};
-	int insertTriangle(const vertex& p1,const vertex& p2,const vertex& p3, unsigned int texture) {
-		triangle.emplace_back(p1, p2, p3, texture);
+	int insertTriangle(const vertex& p1,const vertex& p2,const vertex& p3, unsigned int mapping) {
+		triangle.emplace_back(p1, p2, p3, mapping);
 		return triangle.size() - 1;
 	};
 	int insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
@@ -54,15 +62,19 @@ public:
 	};
 };
 
-class texture {
+/*
+*管理贴图
+*
+*/
+class mapping {
 public:
 	unsigned int **bitmap = nullptr;
 	int width;         
 	int height;            
 	float max_u;                
 	float max_v;
-	texture() {};
-	texture(void *bits, long sizeofPixel, int width, int height, float u, float v) :width(width), height(height), max_u(u), max_v(v) {
+	mapping() {};
+	mapping(void *bits, long sizeofPixel, int width, int height, float u, float v) :width(width), height(height), max_u(u), max_v(v) {
 		char *bit = (char*)bits;
 		int head = sizeof(unsigned int*) * height, row = width * sizeof(unsigned int);
 		ptr = (char *)malloc(head + row * height);
@@ -76,13 +88,13 @@ public:
 		}
 	};
 
-	~texture() {
+	~mapping() {
 		if (ptr!=nullptr) {
 			free(ptr);
 		}
 	};
 
-	unsigned int readTexture(float u, float v) {
+	unsigned int readMap(float u, float v) {
 		u = u * max_u;
 		v = v * max_v;
 		int x = CMID((int)(u + 0.5f), 0, width - 1);
@@ -118,20 +130,22 @@ public:
 		for (auto object : objects) {
 			auto obj = object.second;
 			for (auto ite : obj.triangle) {
-				vertex p1 = ite.p1, p2 = ite.p2, p3 = ite.p3;
-				if (!pretreatment(p1, p2, p3)) { continue; }
-				switch (obj.state) {
-				case WireFrame:
-					drawWire(p1.point, p2.point, p3.point);
-					break;
-				case Color:
-					drawPlane(p1, p2, p3);
-					break;
-				case Texture:
-					drawTexture(p1, p2, p3, *textures[ite.texture]);
-					break;
-				default:
-					break;
+				Triangle tri = ite;
+				if (!pretreatment(tri)) { continue; } else {
+					vertex p1 = tri.p1, p2 = tri.p2, p3 = tri.p3;
+					switch (obj.state) {
+						case WIREFRAME:
+							drawWire(p1.point, p2.point, p3.point);
+							break;
+						case COLOR:
+							drawPlane(p1, p2, p3);
+							break;
+						case MAPPING:
+							drawMapping(p1, p2, p3, *mappings[ite.mapping]);
+							break;
+						default:
+							break;
+					}
 				}
 			}
 		}
@@ -191,8 +205,8 @@ public:
 		return objects.count(objNo);
 	}
 
-	bool ifTextureExist(unsigned int texNo) {
-		return textures.count(texNo);
+	bool ifMappingExist(unsigned int texNo) {
+		return mappings.count(texNo);
 	}
 
 	bool activeObject(unsigned int objNo) {
@@ -207,8 +221,8 @@ public:
 		return insertSquare(p1, p2, p3, p4, 0);
 	}
 
-	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4,unsigned int texture) {
-		if (insertTriangle(p1, p2, p3, texture) != -1 && insertTriangle(p3, p4, p1, texture) != -1) {
+	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4,unsigned int mapping) {
+		if (insertTriangle(p1, p2, p3, mapping) != -1 && insertTriangle(p3, p4, p1, mapping) != -1) {
 			return triangleNo;
 		} else {
 			return -1;
@@ -235,13 +249,13 @@ public:
 		return triangleNo;
 	}
 
-	int insertTriangle(vertex p1, vertex p2, vertex p3, unsigned int texture) {
-		if (ifTextureExist(texture)) {
+	int insertTriangle(vertex p1, vertex p2, vertex p3, unsigned int mapping) {
+		if (ifMappingExist(mapping)) {
 			if (ifObjectExist(objectNo)) {
-				triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+				triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, mapping);
 			} else {
 				newObject();
-				triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, texture);
+				triangleNo = objects[objectNo].insertTriangle(p1, p2, p3, mapping);
 			}
 			return triangleNo;
 		} else {
@@ -263,24 +277,24 @@ public:
 		return triangleNo;
 	}
 
-	unsigned int createTexture(void *bits ,long sizeofPixel, int width, int height) {
-		int No = MaxTextureNo;
-		if (ifTextureExist(No)) {
+	unsigned int createMap(void *bits ,long sizeofPixel, int width, int height) {
+		int No = MaxMappingNo;
+		if (ifMappingExist(No)) {
 			No = -1;
 		} else {
-			textureNo = No;
-			++MaxTextureNo;
-			textures[No] = std::make_shared<texture>(bits, sizeofPixel, width, height, (width - 1), (height - 1));
+			mappingNo = No;
+			++MaxMappingNo;
+			mappings[No] = std::make_shared<mapping>(bits, sizeofPixel, width, height, (width - 1), (height - 1));
 		}
 		return No;
 	}
 
-	void setTexture(int triNo,int texNo) {
-		objects[objectNo].triangle[triNo].texture = texNo;
+	void setMapping(int triNo,int texNo) {
+		objects[objectNo].triangle[triNo].mapping = texNo;
 	}
 
-	void setTexture(int texNo) {
-		setTexture(triangleNo, texNo);
+	void setMapping(int texNo) {
+		setMapping(triangleNo, texNo);
 	}
 
 	void setRenderState(int No,render_state state) {
@@ -327,11 +341,11 @@ private:
 	unsigned int objectNo=0;
 	unsigned int MaxObjectNo = 0;
 	unsigned int triangleNo = 0;
-	unsigned int textureNo = 0;
-	unsigned int MaxTextureNo = 0;
+	unsigned int mappingNo = 0;
+	unsigned int MaxMappingNo = 0;
 	unsigned int backgroundColor = 0x000000;
 	std::map<int, object> objects;
-	std::map<int, std::shared_ptr<texture>> textures;
+	std::map<int, std::shared_ptr<mapping>> mappings;
 
 	bool cullBack = false;
 	bool checkcvv = false;
@@ -348,7 +362,7 @@ private:
 			}
 	}
 
-	void drawTexture(vertex& v1, vertex& v2, vertex& v3, texture& texture) {
+	void drawMapping(vertex& v1, vertex& v2, vertex& v3, mapping& mapping) {
 		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
@@ -356,7 +370,7 @@ private:
 				if (i >= 0) {
 					trap.trapezoid_edge_interp((float)i + 0.5f);
 					scanline_c scanline(trap, i);
-					draw_scanline(scanline, texture);
+					draw_scanline(scanline, mapping);
 				}
 			}
 		}
@@ -382,11 +396,11 @@ private:
 			drawLine(v3.x, v3.y, v1.x, v1.y, 0x000000);
 	}
 
-	bool pretreatment(const vertex& p1, const vertex& p2, const vertex& p3) {
+	bool pretreatment(const Triangle& tri) {
 		if (cullBack) {
-			if (isBack(p1.point*camera.getworld(), p2.point*camera.getworld(), p3.point*camera.getworld())) { return false; }
+			if (isBack(tri)) { return false; }
 		}
-		bool r1 = projection(p1), r2 = projection(p2), r3 = projection(p3);
+		bool r1 = projection(tri.p1), r2 = projection(tri.p2), r3 = projection(tri.p3);
 		return r1||r2||r3 ? true : false;
 	}
 
@@ -426,13 +440,13 @@ private:
 		}
 	}
 
-	void draw_scanline(const scanline_c& scanline, texture& texture) {
+	void draw_scanline(const scanline_c& scanline, mapping& mapping) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
 					zbuffer[scanline.y][x] = scanline.v.rhw;
-					drawPixel(x, scanline.y, texture.readTexture(scanline.v.tc.u * w, scanline.v.tc.v * w));
+					drawPixel(x, scanline.y, mapping.readMap(scanline.v.tc.u * w, scanline.v.tc.v * w));
 				}
 			}
 			scanline.v += scanline.step;
@@ -627,11 +641,9 @@ private:
 		//}			
 	}
 
-	bool isBack(const vector_c & v1, const vector_c & v2, const vector_c & v3) {
-		vector_c sightLine = v2 - camera.viewPoint;
-		vector_c l1 = v2 - v1;
-		vector_c l2 = v3 - v2;
-		return sightLine.dotproduct(l1*l2)>0 ? true : false;
+	bool isBack(const Triangle& tri) {
+		vector_c sightLine = tri.p2.point*camera.getworld() - camera.viewPoint;
+		return sightLine.dotproduct(tri.normal*camera.getworld())>0 ? true : false;
 	}
 };
 
