@@ -8,6 +8,7 @@
 #include"light.h"
 
 const unsigned int defaultColor = 0x000000;
+enum lightNo { Light0, Light1, Light2, Light3, Light4, Light5, Light6, Light7, maxLight };
 enum render_state { WIREFRAME, COLOR, MAPPING };
 /*
 *相机系统，管理变换矩阵
@@ -217,11 +218,7 @@ public:
 		}
 	}
 
-	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4) {
-		return insertSquare(p1, p2, p3, p4, 0);
-	}
-
-	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4,unsigned int mapping) {
+	int insertSquare(vertex& p1, vertex& p2, vertex& p3, vertex& p4, unsigned int mapping = 0) {
 		if (insertTriangle(p1, p2, p3, mapping) != -1 && insertTriangle(p3, p4, p1, mapping) != -1) {
 			return triangleNo;
 		} else {
@@ -229,13 +226,9 @@ public:
 		}
 	}
 
-	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4) {
-		return insertSquare(x1, y1, z1, defaultColor, x2, y2, z2, defaultColor, x3, y3, z3, defaultColor, x3, y3, z3, defaultColor);
-	}
-
-	int insertSquare(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3, float x4, float y4, float z4, unsigned int color4) {
-		insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
-		insertTriangle(x3, y3, z3, color3, x4, y4, z4, color4, x1, y1, z1, color1);
+	int insertSquare(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, unsigned int color1 = defaultColor, unsigned int color2 = defaultColor, unsigned int color3 = defaultColor, unsigned int color4 = defaultColor) {
+		insertTriangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, color1, color2, color3);
+		insertTriangle(x3, y3, z3, x4, y4, z4, x1, y1, z1, color3, color4, color1);
 		return triangleNo;
 	}
 
@@ -263,11 +256,7 @@ public:
 		}
 	}
 
-	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
-		return insertTriangle(x1, y1, z1, defaultColor, x2, y2, z2, defaultColor, x3, y3, z3, defaultColor);
-	}
-
-	int insertTriangle(float x1, float y1, float z1, unsigned int color1, float x2, float y2, float z2, unsigned int color2, float x3, float y3, float z3, unsigned int color3) {
+	int insertTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, unsigned int color1 = defaultColor, unsigned int color2 = defaultColor, unsigned int color3 = defaultColor) {
 		if (ifObjectExist(objectNo)) {
 			triangleNo = objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		} else {
@@ -275,6 +264,36 @@ public:
 			triangleNo = objects[objectNo].insertTriangle(x1, y1, z1, color1, x2, y2, z2, color2, x3, y3, z3, color3);
 		}
 		return triangleNo;
+	}
+
+	void setLight(lightNo lightno, lightType type, float r, float g, float b) {
+		setLight(lightno, type, Color(r, g, b));
+	}
+
+	void setLight(lightNo lightno, lightType type, Color color) {
+		switch (type) {
+			case AMBIENT:
+				light[lightno].ambient = color;
+				break;
+			case DIFFUSE:
+				light[lightno].diffuse = color;
+				break;
+			case SPECULAR:
+				light[lightno].specular = color;
+				break;
+			default:
+				break;
+		}
+	}
+
+	void setLightPosition(lightNo lightno, vector_c pos) {
+		setLightPosition(lightno, pos, vector_c(0, 0, 0));
+	}
+
+	void setLightPosition(lightNo lightno, vector_c pos, vector_c dir) {
+		light[lightno].position = pos;
+		light[lightno].dir = dir;
+		light[lightno].dir.normalize();
 	}
 
 	unsigned int createMap(void *bits ,long sizeofPixel, int width, int height) {
@@ -346,6 +365,7 @@ private:
 	unsigned int backgroundColor = 0x000000;
 	std::map<int, object> objects;
 	std::map<int, std::shared_ptr<mapping>> mappings;
+	Light light[maxLight];
 
 	bool cullBack = false;
 	bool checkcvv = false;

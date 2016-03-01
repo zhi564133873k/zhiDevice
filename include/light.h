@@ -1,12 +1,12 @@
 #pragma once
 #include"figure.h"
 
-
+enum lightType { AMBIENT, DIFFUSE, SPECULAR };
 /*
 *管理光照
 *
 */
-class light {
+class Light {
 public:
 	vector_c position;//光源位置
 	vector_c dir;//光照方向
@@ -17,6 +17,8 @@ public:
 	float spot_inner;//聚光灯内锥角
 	float spot_outer;//聚光灯外锥角
 	float pf;//聚光灯指数因子
+
+	Light() :ambient(1.0, 1.0, 1.0), diffuse(1.0, 1.0, 1.0), specular(1.0, 1.0, 1.0) {} = default;
 };
 
 /*
