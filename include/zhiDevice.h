@@ -139,7 +139,7 @@ public:
 							drawWire(p1.point, p2.point, p3.point);
 							break;
 						case COLOR:
-							drawPlane(p1, p2, p3);
+							drawPlane(tri, getLightColor(ite));
 							break;
 						case MAPPING:
 							drawMapping(p1, p2, p3, *mappings[ite.mapping]);
@@ -266,6 +266,14 @@ public:
 		return triangleNo;
 	}
 
+	void activeLight(lightNo lightno) {
+		light[lightno].active = true;
+	}
+
+	void deactiveLight(lightNo lightno) {
+		light[lightno].active = false;
+	}
+
 	void setLight(lightNo lightno, lightType type, float r, float g, float b) {
 		setLight(lightno, type, Color(r, g, b));
 	}
@@ -278,23 +286,24 @@ public:
 			case DIFFUSE:
 				light[lightno].diffuse = color;
 				break;
-			case SPECULAR:
-				light[lightno].specular = color;
-				break;
+			//case SPECULAR:
+			//	light[lightno].specular = color;
+			//	break;
 			default:
 				break;
 		}
 	}
 
-	void setLightPosition(lightNo lightno, vector_c pos) {
-		setLightPosition(lightno, pos, vector_c(0, 0, 0));
+	void setLightPosition(lightNo lightno,const vector_c& pos) {
+		light[lightno].position = pos;
+		//setLightPosition(lightno, pos, vector_c(0, 0, 0));
 	}
 
-	void setLightPosition(lightNo lightno, vector_c pos, vector_c dir) {
-		light[lightno].position = pos;
-		light[lightno].dir = dir;
-		light[lightno].dir.normalize();
-	}
+	//void setLightPosition(lightNo lightno,const vector_c& pos,const vector_c& dir) {
+	//	light[lightno].position = pos;
+	//	//light[lightno].dir = dir;
+	//	light[lightno].dir.normalize();
+	//}
 
 	unsigned int createMap(void *bits ,long sizeofPixel, int width, int height) {
 		int No = MaxMappingNo;
@@ -396,15 +405,16 @@ private:
 		}
 	}
 
-	void drawPlane(vertex& v1, vertex& v2, vertex& v3) {
-		std::vector<trapezoid> trap_vect = getTrap(v1, v2, v3);
+	void drawPlane(const Triangle& tri, const Color& lightColor) {
+		std::vector<trapezoid> trap_vect = getTrap(tri.p1, tri.p2, tri.p3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
+
 			for (int i = top; i < bottom&&i < height; ++i) {
 				if (i >= 0) {
 					trap.trapezoid_edge_interp((float)i + 0.5f);
 					scanline_c scanline(trap, i);
-					draw_scanline(scanline);
+					draw_scanline(scanline, lightColor);
 				}
 			}
 		}
@@ -437,7 +447,7 @@ private:
 		}			
 	}
 
-	void draw_scanline(const scanline_c& scanline) {
+	void draw_scanline(const scanline_c& scanline,const Color& light) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
@@ -446,9 +456,12 @@ private:
 					float r = scanline.v.color.r * w;
 					float g = scanline.v.color.g * w;
 					float b = scanline.v.color.b * w;
-					int R = (int)(r * 255.0f);
-					int G = (int)(g * 255.0f);
-					int B = (int)(b * 255.0f);
+					//int R = (int)(r * 255.0f)*light.r;
+					//int G = (int)(g * 255.0f)*light.g;
+					//int B = (int)(b * 255.0f)*light.b;
+					int R = (int)(r *light.r);
+					int G = (int)(g*light.g);
+					int B = (int)(b *light.b);
 					R = CMID(R, 0, 255);
 					G = CMID(G, 0, 255);
 					B = CMID(B, 0, 255);
@@ -664,6 +677,24 @@ private:
 	bool isBack(const Triangle& tri) {
 		vector_c sightLine = tri.p2.point*camera.getworld() - camera.viewPoint;
 		return sightLine.dotproduct(tri.normal*camera.getworld())>0 ? true : false;
+	}
+
+	Color getLightColor(const Triangle& tri) {
+		Color lightColor(1.0, 1.0, 1.0);
+		for (auto ite : light) {
+			if (!ite.active) { continue; }
+			lightColor.r += ite.ambient.r;
+			lightColor.g += ite.ambient.g;
+			lightColor.b += ite.ambient.b;
+			vector_c l = ite.position - tri.p1.point;
+			float dp = tri.normal.dotproduct(l);
+			float dist = l.length();
+			float i = dp / (tri.normal.length()*dist*(ite.kc + ite.kl*dist + ite.kq*dist*dist));
+			lightColor.r += ite.diffuse.r*i;
+			lightColor.g += ite.diffuse.g*i;
+			lightColor.b += ite.diffuse.b*i;
+		}
+		return lightColor;
 	}
 };
 

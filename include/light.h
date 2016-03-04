@@ -8,17 +8,18 @@ enum lightType { AMBIENT, DIFFUSE, SPECULAR };
 */
 class Light {
 public:
+	bool active = false;
 	vector_c position;//光源位置
-	vector_c dir;//光照方向
+	//vector_c dir;//光照方向
 	Color ambient;//环境光照颜色
 	Color diffuse;//漫反射光颜色
-	Color specular;//镜面反射光颜色
-	float kc, kl, kq;//衰减因子
-	float spot_inner;//聚光灯内锥角
-	float spot_outer;//聚光灯外锥角
-	float pf;//聚光灯指数因子
-
-	Light() :ambient(1.0, 1.0, 1.0), diffuse(1.0, 1.0, 1.0), specular(1.0, 1.0, 1.0) {} = default;
+	//Color specular;//镜面反射光颜色
+	float kc = 0.01, kl = 0.01, kq = 0.01;//衰减因子
+	//float spot_inner;//聚光灯内锥角
+	//float spot_outer;//聚光灯外锥角
+	//float pf;//聚光灯指数因子
+	Light() :ambient(0.0, 0.0, 0.0), diffuse(0.0, 0.0, 0.0) {};
+	//Light() :ambient(1.0, 1.0, 1.0), diffuse(1.0, 1.0, 1.0), specular(1.0, 1.0, 1.0) {};
 };
 
 /*
