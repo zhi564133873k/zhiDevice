@@ -139,7 +139,8 @@ public:
 							drawWire(p1.point, p2.point, p3.point);
 							break;
 						case COLOR:
-							drawPlane(tri, getLightColor(ite));
+							getLightColor(tri, ite);
+							drawPlane(tri);
 							break;
 						case MAPPING:
 							drawMapping(p1, p2, p3, *mappings[ite.mapping]);
@@ -405,16 +406,15 @@ private:
 		}
 	}
 
-	void drawPlane(const Triangle& tri, const Color& lightColor) {
+	void drawPlane(const Triangle& tri) {		
 		std::vector<trapezoid> trap_vect = getTrap(tri.p1, tri.p2, tri.p3);
 		for (auto trap : trap_vect) {
 			int top = (int)(trap.top + 0.5f), bottom = (int)(trap.bottom + 0.5f);
-
 			for (int i = top; i < bottom&&i < height; ++i) {
 				if (i >= 0) {
 					trap.trapezoid_edge_interp((float)i + 0.5f);
 					scanline_c scanline(trap, i);
-					draw_scanline(scanline, lightColor);
+					draw_scanline(scanline);
 				}
 			}
 		}
@@ -447,21 +447,28 @@ private:
 		}			
 	}
 
-	void draw_scanline(const scanline_c& scanline,const Color& light) {
+	vector_c projection(const vector_c& p) {
+		return homogenize(p*camera.tranMatrix);
+	}
+
+	void draw_scanline(const scanline_c& scanline) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
 					zbuffer[scanline.y][x] = scanline.v.rhw;
-					float r = scanline.v.color.r * w;
-					float g = scanline.v.color.g * w;
-					float b = scanline.v.color.b * w;
-					//int R = (int)(r * 255.0f)*light.r;
-					//int G = (int)(g * 255.0f)*light.g;
-					//int B = (int)(b * 255.0f)*light.b;
-					int R = (int)(r *light.r);
-					int G = (int)(g*light.g);
-					int B = (int)(b *light.b);
+					//float r = scanline.v.color.r * w;
+					//float g = scanline.v.color.g * w;
+					//float b = scanline.v.color.b * w;
+					//int R = (int)(r * 255.0f);
+					//int G = (int)(g * 255.0f);
+					//int B = (int)(b * 255.0f);
+					//int R = (int)(r *light.r);
+					//int G = (int)(g*light.g);
+					//int B = (int)(b *light.b);
+					int R = scanline.v.color.r * w;
+					int G = scanline.v.color.g * w;
+					int B = scanline.v.color.b * w;
 					R = CMID(R, 0, 255);
 					G = CMID(G, 0, 255);
 					B = CMID(B, 0, 255);
@@ -679,22 +686,26 @@ private:
 		return sightLine.dotproduct(tri.normal*camera.getworld())>0 ? true : false;
 	}
 
-	Color getLightColor(const Triangle& tri) {
-		Color lightColor(1.0, 1.0, 1.0);
+	void getLightColor(const Triangle& tri, const Triangle& org) {
 		for (auto ite : light) {
 			if (!ite.active) { continue; }
-			lightColor.r += ite.ambient.r;
-			lightColor.g += ite.ambient.g;
-			lightColor.b += ite.ambient.b;
-			vector_c l = ite.position - tri.p1.point;
-			float dp = tri.normal.dotproduct(l);
-			float dist = l.length();
-			float i = dp / (tri.normal.length()*dist*(ite.kc + ite.kl*dist + ite.kq*dist*dist));
-			lightColor.r += ite.diffuse.r*i;
-			lightColor.g += ite.diffuse.g*i;
-			lightColor.b += ite.diffuse.b*i;
+			vector_c pos = ite.position;
+			vector_c l1 = pos - org.p1.point;
+			vector_c l2 = pos - org.p2.point;
+			vector_c l3 = pos - org.p3.point;
+			float dp1 = tri.normal.dotproduct(l1);
+			float dp2 = tri.normal.dotproduct(l2);
+			float dp3 = tri.normal.dotproduct(l3);
+			float dist1 = l1.length();
+			float dist2 = l2.length();
+			float dist3 = l3.length();
+			float i1 = dp1 / (tri.normal.length()*dist1*(ite.kc + ite.kl*dist1 + ite.kq*dist1*dist1));
+			float i2 = dp2 / (tri.normal.length()*dist2*(ite.kc + ite.kl*dist2 + ite.kq*dist2*dist2));
+			float i3 = dp3 / (tri.normal.length()*dist3*(ite.kc + ite.kl*dist3 + ite.kq*dist3*dist3));
+			tri.p1.color *= ite.ambient + (ite.diffuse*i1);
+			tri.p2.color *= ite.ambient + (ite.diffuse*i2);
+			tri.p3.color *= ite.ambient + (ite.diffuse*i3);
 		}
-		return lightColor;
 	}
 };
 

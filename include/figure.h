@@ -21,7 +21,10 @@ public:
 	Color(float r, float g, float b) :r(r), g(g), b(b) {};
 	
 	friend Color  operator * (const Color&, const Color&);
-	friend Color  operator *= (const Color&, float);
+	friend Color  operator * (const Color&, float);
+	friend Color  operator + (const Color&, const Color&);
+	//friend Color  operator *= (const Color&, float);
+	void  operator *= (const Color&);
 
 	void alphaMix(const Color&, float);
 
@@ -138,8 +141,34 @@ Color operator*(const Color & c1, const Color & c2) {
 	return Color(c1.r*c2.r, c1.g*c2.g, c1.b*c2.b);
 }
 
-Color operator*=(const Color & c, float alpha) {
+Color operator*(const Color & c, float alpha) {
 	return Color(c.r*alpha, c.g*alpha, c.b*alpha);
+}
+
+Color operator+(const Color & c1, const Color & c2) {
+	return Color(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b);
+}
+
+//Color operator*=(const Color & c, float alpha) {
+//	return Color(c.r*alpha, c.g*alpha, c.b*alpha);
+//}
+
+void Color::operator*=(const Color & c) {
+	if (c.r*r==0) {
+		r += c.r;
+	} else {
+		r *= c.r;
+	}
+	if (c.g*g == 0) {
+		g += c.g;
+	} else {
+		g *= c.g;
+	}
+	if (c.b*b == 0) {
+		b += c.b;
+	} else {
+		b *= c.b;
+	}
 }
 
 void Color::alphaMix(const Color & c, float alpha) {	
