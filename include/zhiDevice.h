@@ -457,18 +457,18 @@ private:
 				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
 					zbuffer[scanline.y][x] = scanline.v.rhw;
-					//float r = scanline.v.color.r * w;
-					//float g = scanline.v.color.g * w;
-					//float b = scanline.v.color.b * w;
-					//int R = (int)(r * 255.0f);
-					//int G = (int)(g * 255.0f);
-					//int B = (int)(b * 255.0f);
+					float r = scanline.v.color.r * w;
+					float g = scanline.v.color.g * w;
+					float b = scanline.v.color.b * w;
+					int R = (int)(r * 255.0f);
+					int G = (int)(g * 255.0f);
+					int B = (int)(b * 255.0f);
 					//int R = (int)(r *light.r);
 					//int G = (int)(g*light.g);
 					//int B = (int)(b *light.b);
-					int R = scanline.v.color.r * w;
-					int G = scanline.v.color.g * w;
-					int B = scanline.v.color.b * w;
+					//int R = scanline.v.color.r * w;
+					//int G = scanline.v.color.g * w;
+					//int B = scanline.v.color.b * w;
 					R = CMID(R, 0, 255);
 					G = CMID(G, 0, 255);
 					B = CMID(B, 0, 255);
@@ -702,9 +702,12 @@ private:
 			float i1 = dp1 / (tri.normal.length()*dist1*(ite.kc + ite.kl*dist1 + ite.kq*dist1*dist1));
 			float i2 = dp2 / (tri.normal.length()*dist2*(ite.kc + ite.kl*dist2 + ite.kq*dist2*dist2));
 			float i3 = dp3 / (tri.normal.length()*dist3*(ite.kc + ite.kl*dist3 + ite.kq*dist3*dist3));
-			tri.p1.color *= ite.ambient + (ite.diffuse*i1);
-			tri.p2.color *= ite.ambient + (ite.diffuse*i2);
-			tri.p3.color *= ite.ambient + (ite.diffuse*i3);
+			tri.p1.color *= (ite.ambient + (ite.diffuse*i1));
+			tri.p2.color *= (ite.ambient + (ite.diffuse*i2));
+			tri.p3.color *= (ite.ambient + (ite.diffuse*i3));
+			tri.p1.color = tri.p1.color / 255;
+			tri.p2.color = tri.p2.color / 255;
+			tri.p3.color = tri.p3.color / 255;
 		}
 	}
 };

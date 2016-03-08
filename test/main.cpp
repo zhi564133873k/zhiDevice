@@ -54,12 +54,12 @@ void insertModel(vertex& p1, vertex& p2, vertex& p3, vertex& p4, unsigned int te
 
 void initObject() {
 	cubeNo = device->newObject();
-	insertModel(cube[0], cube[3], cube[2], cube[1], textureNo, 0x010101);
-	insertModel(cube[4], cube[5], cube[6], cube[7], textureNo, 0x010101);
-	insertModel(cube[0], cube[1], cube[5], cube[4], textureNo, 0x010101);
-	insertModel(cube[1], cube[2], cube[6], cube[5], textureNo, 0x010101);
-	insertModel(cube[2], cube[3], cube[7], cube[6], textureNo, 0x010101);
-	insertModel(cube[3], cube[0], cube[4], cube[7], textureNo, 0x010101);
+	insertModel(cube[0], cube[3], cube[2], cube[1], textureNo);
+	insertModel(cube[4], cube[5], cube[6], cube[7], textureNo);
+	insertModel(cube[0], cube[1], cube[5], cube[4], textureNo);
+	insertModel(cube[1], cube[2], cube[6], cube[5], textureNo);
+	insertModel(cube[2], cube[3], cube[7], cube[6], textureNo);
+	insertModel(cube[3], cube[0], cube[4], cube[7], textureNo);
 }
 
 void init() {
@@ -76,7 +76,7 @@ void init() {
 	device->setLightPosition(Light0, vector_c(4, 7, 4));
 	//device->setLight(Light0, AMBIENT, Color(0xFF0000));
 	device->setLight(Light0, DIFFUSE, Color(0x00FF00));
-	device->activeLight(Light0);
+	//device->activeLight(Light0);
 	mwindow.SetDisplayFunc(DrawFunc);
 	mwindow.SetReSize(reSizeScreen);
 	mwindow.SetKeyDownEvent(VK_UP, forward);

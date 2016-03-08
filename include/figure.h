@@ -23,6 +23,7 @@ public:
 	friend Color  operator * (const Color&, const Color&);
 	friend Color  operator * (const Color&, float);
 	friend Color  operator + (const Color&, const Color&);
+	friend Color  operator / (const Color&, float);
 	//friend Color  operator *= (const Color&, float);
 	void  operator *= (const Color&);
 
@@ -147,6 +148,10 @@ Color operator*(const Color & c, float alpha) {
 
 Color operator+(const Color & c1, const Color & c2) {
 	return Color(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b);
+}
+
+Color operator/(const Color & c, float d) {
+	return Color(c.r / d, c.g / d, c.b / d);
 }
 
 //Color operator*=(const Color & c, float alpha) {
