@@ -70,7 +70,7 @@ void init() {
 	}
 	initObject();
 	device->setBGColor(0xFFFFFF);
-	device->setRenderState(cubeNo, COLOR);
+	device->setRenderState(cubeNo, MAPPING);
 	device->setCullBack(true);
 	//device->setCVVCheck(true);
 	device->setLightPosition(Light0, vector_c(4, 7, 4));
@@ -119,7 +119,7 @@ void DrawFunc() {
 	}
 	device->setLookAt(pos, pos, pos, 0, 0, 0, 0, 1, 0);
 	matrix_c world,temp;
-	world.set_rotate(1, -1, 1, alpha);
+	world.set_rotate(0, 1, 0, alpha);
 	//temp.set_rotate();
 	device->setWorld(world);
 	device->drawFrames();
