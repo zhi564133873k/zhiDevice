@@ -23,4 +23,4 @@ c++实现3D软件渲染，运用基本图形学知识实现软件渲染器，虽
 
 纹理渲染(MAPPING)
 
-![image](https://github.com/zhi564133873k/zhiDevice/blob/master/demo/mapping.jpg）
+![image](https://github.com/zhi564133873k/zhiDevice/blob/master/demo/mapping.jpg)
