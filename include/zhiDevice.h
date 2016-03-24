@@ -3,6 +3,7 @@
 #include<utility>
 #include<map>
 #include<memory>
+#include"TwoDimPtr.h"
 #include"zhi_matrix.h"
 #include"figure.h"
 #include"light.h"
@@ -110,18 +111,12 @@ private:
 class zhiDevice {
 public:
 	zhiDevice(unsigned int **framebuffer, int width, int height) :framebuffer(framebuffer), width(width), height(height), camera(width,height){
-		zbuf = (char*)malloc(sizeof(float*) * height + width * sizeof(float) * height+64);
-		zbuffer = (float**)zbuf;
-		for (int i = 0; i < height; ++i) {
-			zbuffer[i] = (float*)(zbuf+sizeof(float*) * height + width * sizeof(float)* i);
-		}
+		zbuffer = std::make_shared<TwoDimPtr<float>>(width, height);
 	};
 	zhiDevice(unsigned int **framebuffer) :zhiDevice(framebuffer, 800, 600) {};
 	zhiDevice() :zhiDevice(nullptr, 800, 600) {};
 
-	~zhiDevice() {
-		free(zbuf);
-	}
+	~zhiDevice() {}
 
 	void drawFrames() {
 		if (framebuffer == nullptr) {
@@ -154,12 +149,7 @@ public:
 	}
 
 	void clear() {
-		objects.clear();
-		for (int i = 0; i < height; ++i) {
-			for (int j = 0; j < width; ++j) {
-				zbuffer[i][j] = -1.0;
-			}
-		}
+		objects.clear();		
 	}
 
 	void setLookAt(const vector_c & eye, const vector_c & at, const vector_c & up) {
@@ -179,12 +169,7 @@ public:
 		zhiDevice::height = height;
 		zhiDevice::framebuffer = framebuffer;
 		camera.setAspect(width,height);
-		free(zbuf);
-		zbuf = (char*)malloc(sizeof(float*) * height + width * sizeof(float) * height + 64);
-		zbuffer = (float**)zbuf;
-		for (int i = 0; i < height; ++i) {
-			zbuffer[i] = (float*)(zbuf + sizeof(float*) * height + width * sizeof(float)* i);
-		}
+		(*zbuffer).reAlloc(width, height);
 	}
 
 	int newObject() {
@@ -363,8 +348,7 @@ public:
 private:
 	int width, height;
 	unsigned int** framebuffer = nullptr;
-	float** zbuffer = nullptr;
-	char* zbuf = nullptr;//整个深度缓存区 方便一次释放内存
+	std::shared_ptr<TwoDimPtr<float>> zbuffer = nullptr;
 
 	camera camera;
 	unsigned int objectNo=0;
@@ -383,13 +367,10 @@ private:
 	void drawBackGround() {
 			for (int j = 0; j < height; ++j) {
 				for (int i = 0; i < width; ++i) {
-					drawPixel(i, j, backgroundColor);
-					if (zbuffer[j][i] == 0) {
-						int k = 1;
-					}
-					zbuffer[j][i] = 0;
+					drawPixel(i, j, backgroundColor);					
 				}
 			}
+			(*zbuffer).clear();
 	}
 
 	void drawMapping(vertex& v1, vertex& v2, vertex& v3, mapping& mapping) {
@@ -454,9 +435,9 @@ private:
 	void draw_scanline(const scanline_c& scanline) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
-				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
+				if (scanline.v.rhw >= (*zbuffer)[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
-					zbuffer[scanline.y][x] = scanline.v.rhw;
+					(*zbuffer)[scanline.y][x] = scanline.v.rhw;
 					float r = scanline.v.color.r * w;
 					float g = scanline.v.color.g * w;
 					float b = scanline.v.color.b * w;
@@ -483,9 +464,10 @@ private:
 	void draw_scanline(const scanline_c& scanline, mapping& mapping) {
 		for (int sw = scanline.w, x = scanline.x; sw > 0; x++, sw--) {
 			if (x >= 0 && x < width) {
-				if (scanline.v.rhw >= zbuffer[scanline.y][x]) {
+				float zbuf = (*zbuffer)[scanline.y][x];
+				if (scanline.v.rhw >= (*zbuffer)[scanline.y][x]) {
 					float w = 1.0f / scanline.v.rhw;
-					zbuffer[scanline.y][x] = scanline.v.rhw;
+					(*zbuffer)[scanline.y][x] = scanline.v.rhw;
 					drawPixel(x, scanline.y, mapping.readMap(scanline.v.tc.u * w, scanline.v.tc.v * w));
 				}
 			}

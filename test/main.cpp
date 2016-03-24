@@ -90,7 +90,7 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 
 	mwindow.Create3DWindow();
 	
-	device=new zhiDevice(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
+	device=new zhiDevice(mwindow.getFrameBuffer(),mwindow.GetWidth(),mwindow.GetHeight());
 	
 	init();
 
@@ -126,7 +126,7 @@ void DrawFunc() {
 }
 
 void reSizeScreen() {
-	device->ReSizeScreen(mwindow.framebuffer,mwindow.GetWidth(),mwindow.GetHeight());
+	device->ReSizeScreen(mwindow.getFrameBuffer(),mwindow.GetWidth(),mwindow.GetHeight());
 }
 
 void forward() {
