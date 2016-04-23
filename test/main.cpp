@@ -1,8 +1,8 @@
 #include"zhiDevice.h"
-#include"mWindow.h"
+#include"zhiWindow.h"
 #include"LoadTexture.h"
 zhiDevice *device=nullptr;
-mWindow & mwindow = mWindow::Instance();
+zhiWindow & window = zhiWindow();
 unsigned int textureNo=0;
 void DrawFunc();
 void reSizeScreen();
@@ -63,7 +63,7 @@ void initObject() {
 }
 
 void init() {
-	mwindow.setFPS(30);
+	window.setFPS(30);
 	textureNo = LoadTexture(L"1.BMP", *device);
 	if (textureNo == -1) {
 		init_texture();
@@ -77,10 +77,10 @@ void init() {
 	//device->setLight(Light0, AMBIENT, Color(0xFF0000));
 	device->setLight(Light0, DIFFUSE, Color(0x00FF00));
 	//device->activeLight(Light0);
-	mwindow.SetDisplayFunc(DrawFunc);
-	mwindow.SetReSize(reSizeScreen);
-	mwindow.SetKeyDownEvent(VK_UP, forward);
-	mwindow.SetKeyDownEvent(VK_DOWN, backward);
+	window.SetDisplayFunc(DrawFunc);
+	window.SetReSize(reSizeScreen);
+	window.SetKeyDownEvent(VK_UP, forward);
+	window.SetKeyDownEvent(VK_DOWN, backward);
 }
 
 int WINAPI WinMain(HINSTANCE	hInstance,
@@ -88,9 +88,9 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 	LPSTR		lpCmdLine,
 	int		nCmdShow) {
 
-	mwindow.Create3DWindow();
+	window.Create3DWindow();
 	
-	device=new zhiDevice(mwindow.getFrameBuffer(),mwindow.GetWidth(),mwindow.GetHeight());
+	device=new zhiDevice(window.getFrameBuffer(),window.GetWidth(),window.GetHeight());
 	
 	init();
 
@@ -99,14 +99,14 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 }
 
 void DrawFunc() {
-	if (mwindow.GetKey(VK_LEFT)) {
+	if (window.GetKey(VK_LEFT)) {
 		alpha += 0.1f;
 	} else {
-		if (mwindow.GetKey(VK_RIGHT)) {
+		if (window.GetKey(VK_RIGHT)) {
 			alpha -= 0.1f;
 		}
 	}
-	if (mwindow.GetKey(VK_SPACE)) {
+	if (window.GetKey(VK_SPACE)) {
 		static render_state state = MAPPING;
 		if (state == COLOR) {
 			state = MAPPING;
@@ -118,15 +118,14 @@ void DrawFunc() {
 		device->setRenderState(cubeNo, state);
 	}
 	device->setLookAt(pos, pos, pos, 0, 0, 0, 0, 1, 0);
-	matrix_c world,temp;
+	matrix_c world;
 	world.set_rotate(0, 1, 0, alpha);
-	//temp.set_rotate();
 	device->setWorld(world);
 	device->drawFrames();
 }
 
 void reSizeScreen() {
-	device->ReSizeScreen(mwindow.getFrameBuffer(),mwindow.GetWidth(),mwindow.GetHeight());
+	device->ReSizeScreen(window.getFrameBuffer(),window.GetWidth(),window.GetHeight());
 }
 
 void forward() {
